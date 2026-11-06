@@ -326,7 +326,10 @@ const URL_PLANILHA = 'https://script.google.com/macros/s/AKfycby-sX5lrW3o-4ote9E
 
 formCheckout.addEventListener('submit', async (e) => {
   e.preventDefault(); // não recarrega a página
-  const nome = formCheckout.elements.nome.value;
+  const nome = formCheckout.elements.nome.value.trim();
+  const email = formCheckout.elements.email.value.trim();
+  const endereco = formCheckout.elements.endereco.value.trim();
+  const pagamento = formCheckout.elements.pagamento.value;
 
   if (URL_PLANILHA) {
     const botaoConfirmar = formCheckout.querySelector('button[type="submit"]');
@@ -344,7 +347,14 @@ formCheckout.addEventListener('submit', async (e) => {
       // corpo em texto simples: evita o "preflight" do navegador (CORS)
       const resposta = await fetch(URL_PLANILHA, {
         method: 'POST',
-        body: JSON.stringify({ nome: nome, livro: livrosTexto, valor: valor })
+        body: JSON.stringify({
+          nome: nome,
+          email: email,
+          endereco: endereco,
+          pagamento: pagamento,
+          livro: livrosTexto,
+          valor: valor
+        })
       });
       const resultado = await resposta.json();
       if (!resultado.ok) throw new Error(resultado.erro);
