@@ -6,9 +6,9 @@
  * 1. Na planilha Google ("TRABALHO INDIO"), clique em: Extensões > Apps Script.
  * 2. Apague todo o código antigo do editor, cole TODO este arquivo e salve (Ctrl+S).
  * 3. Recarregue a planilha (F5): o menu personalizado "📚 Automação" aparecerá no topo!
- * 4. Para manter o site funcionando com a versão nova:
+ * 4. Para o site enxergar a atualização (SEM mudar a URL!):
  *    No Apps Script, clique em Implantar > Gerenciar implantações > ícone de lápis (Editar) >
- *    Versão: "Nova versão" > Implantar. (A URL /exec usada no site permanece a mesma.)
+ *    Versão: "Nova versão" > Implantar.
  * 5. Opcional — Acionar também por Botões na planilha:
  *    Inserir > Desenho > desenhe um botão > Salvar e fechar > clique nos 3 pontinhos do botão >
  *    "Atribuir script" e digite um dos nomes abaixo (sem parênteses):
@@ -58,7 +58,22 @@ function onOpen() {
 // FUNÇÕES AUXILIARES DE PLANILHA, VALIDAÇÃO E LOG
 // ===============================================================
 function obterPlanilha() {
-  return SpreadsheetApp.getActiveSpreadsheet() || SpreadsheetApp.openById(ID_PLANILHA);
+  try {
+    return SpreadsheetApp.openById(ID_PLANILHA);
+  } catch (e) {
+    return SpreadsheetApp.getActiveSpreadsheet();
+  }
+}
+
+function mostrarToast(mensagem, titulo) {
+  try {
+    const ativa = SpreadsheetApp.getActiveSpreadsheet();
+    if (ativa) {
+      ativa.toast(mensagem, titulo || '📚 Automação', 5);
+    }
+  } catch (e) {
+    // Ignora se chamado fora da interface da planilha
+  }
 }
 
 function abaPedidos() {
@@ -85,15 +100,6 @@ function abaLog() {
   return log;
 }
 
-function obterUsuario(origem) {
-  if (origem === 'site') return 'Site (Web App)';
-  try {
-    return Session.getActiveUser().getEmail() || Session.getEffectiveUser().getEmail() || 'Usuário da planilha';
-  } catch (e) {
-    return 'Usuário da planilha';
-  }
-}
-
 function registrarLog(acao, id, nome, livro, valor, observacao, origem) {
   try {
     const log = abaLog();
@@ -101,6 +107,7 @@ function registrarLog(acao, id, nome, livro, valor, observacao, origem) {
     const valorCelula = valor === '' || valor === undefined || valor === null || isNaN(Number(valor))
       ? ''
       : Number(valor);
+    const usuario = origem === 'site' ? 'Site (Web App)' : 'Planilha (Menu/Botão)';
 
     log.getRange(linha, 5, 1, 2).setNumberFormat('@');
     log.getRange(linha, 1).setNumberFormat('dd/mm/yyyy hh:mm:ss');
@@ -110,7 +117,7 @@ function registrarLog(acao, id, nome, livro, valor, observacao, origem) {
 
     log.getRange(linha, 1, 1, 8).setValues([[
       new Date(),
-      obterUsuario(origem),
+      usuario,
       acao,
       id || '-',
       nome || '-',
@@ -119,7 +126,6 @@ function registrarLog(acao, id, nome, livro, valor, observacao, origem) {
       observacao || ''
     ]]);
   } catch (erro) {
-    // Falha no log não deve impedir a operação principal
     Logger.log('Aviso ao gravar log: ' + erro);
   }
 }
@@ -182,13 +188,16 @@ function acharLinha(aba, id) {
 }
 
 function formatarLinhaPedido(aba, linha) {
-  const intervalo = aba.getRange(linha, 1, 1, 5);
-  aba.getRange(linha, 2, 1, 2).setNumberFormat('@');
-  aba.getRange(linha, 4).setNumberFormat('R$ #,##0.00');
-  aba.getRange(linha, 5).setNumberFormat('dd/mm/yyyy hh:mm:ss');
-  aba.getRange(linha, 1).setHorizontalAlignment('center');
-  aba.getRange(linha, 4, 1, 2).setHorizontalAlignment('center');
-  intervalo.setBorders(true, true, true, true, true, true);
+  try {
+    const intervalo = aba.getRange(linha, 1, 1, 5);
+    aba.getRange(linha, 4).setNumberFormat('R$ #,##0.00');
+    aba.getRange(linha, 5).setNumberFormat('dd/mm/yyyy hh:mm:ss');
+    aba.getRange(linha, 1).setHorizontalAlignment('center');
+    aba.getRange(linha, 4, 1, 2).setHorizontalAlignment('center');
+    intervalo.setBorder(true, true, true, true, true, true);
+  } catch (erro) {
+    Logger.log('Aviso ao formatar linha: ' + erro);
+  }
 }
 
 // ===============================================================
@@ -215,8 +224,10 @@ function registrarOperacao(nome, livro, valor, origem) {
   const id = estado.proximoId;
   const agora = new Date();
 
-  formatarLinhaPedido(aba, linha);
+  // Grava primeiro os dados (garantindo texto simples em B:C) e depois formata
+  aba.getRange(linha, 2, 1, 2).setNumberFormat('@');
   aba.getRange(linha, 1, 1, 5).setValues([[id, nomeLimpo, livroLimpo, valorNum, agora]]);
+  formatarLinhaPedido(aba, linha);
 
   const ehSite = origem === 'site';
   registrarLog(
@@ -238,7 +249,8 @@ function acionarRegistrarOperacao() {
 
   let nome = textoSeguro(aba.getRange(CELULA_NOME).getValue(), 80);
   let livro = textoSeguro(aba.getRange(CELULA_LIVRO).getValue(), 300);
-  let valorTexto = String(aba.getRange(CELULA_VALOR).getValue() ?? '').trim();
+  const brutoValor = aba.getRange(CELULA_VALOR).getValue();
+  let valorTexto = String(brutoValor === undefined || brutoValor === null ? '' : brutoValor).trim();
 
   const usouPainel = Boolean(nome || livro || valorTexto);
 
@@ -274,7 +286,7 @@ function acionarRegistrarOperacao() {
   }
 
   aba.getRange(INTERVALO_PAINEL).clearContent();
-  obterPlanilha().toast('Pedido #' + resultado.id + ' registrado com sucesso!', '📚 Automação', 5);
+  mostrarToast('Pedido #' + resultado.id + ' registrado com sucesso!', '📚 Automação');
   ui.alert('Sucesso!', 'Operação registrada com sucesso (ID #' + resultado.id + ').', ui.ButtonSet.OK);
 }
 
@@ -342,10 +354,12 @@ function acionarAtualizarInformacoes() {
   const ui = SpreadsheetApp.getUi();
   const aba = abaPedidos();
 
-  let idTexto = String(aba.getRange(CELULA_ID).getValue() ?? '').trim();
+  const brutoId = aba.getRange(CELULA_ID).getValue();
+  let idTexto = String(brutoId === undefined || brutoId === null ? '' : brutoId).trim();
   const nomePainel = textoSeguro(aba.getRange(CELULA_NOME).getValue(), 80);
   const livroPainel = textoSeguro(aba.getRange(CELULA_LIVRO).getValue(), 300);
-  const valorPainelTexto = String(aba.getRange(CELULA_VALOR).getValue() ?? '').trim();
+  const brutoValor = aba.getRange(CELULA_VALOR).getValue();
+  const valorPainelTexto = String(brutoValor === undefined || brutoValor === null ? '' : brutoValor).trim();
 
   // Caso 1: usuário preencheu o ID (H2) e pelo menos um campo novo no Painel (H3:H5)
   if (idTexto && (nomePainel || livroPainel || valorPainelTexto)) {
@@ -368,7 +382,7 @@ function acionarAtualizarInformacoes() {
     }
 
     aba.getRange(INTERVALO_PAINEL).clearContent();
-    obterPlanilha().toast('Pedido #' + resPainel.id + ' atualizado!', '📚 Automação', 5);
+    mostrarToast('Pedido #' + resPainel.id + ' atualizado!', '📚 Automação');
     ui.alert('Sucesso!', 'Informações do pedido #' + resPainel.id + ' atualizadas com sucesso.', ui.ButtonSet.OK);
     return;
   }
@@ -436,7 +450,7 @@ function acionarAtualizarInformacoes() {
   }
 
   aba.getRange(INTERVALO_PAINEL).clearContent();
-  obterPlanilha().toast('Pedido #' + resultado.id + ' atualizado!', '📚 Automação', 5);
+  mostrarToast('Pedido #' + resultado.id + ' atualizado!', '📚 Automação');
   ui.alert('Sucesso!', 'Informações do pedido #' + resultado.id + ' atualizadas com sucesso.', ui.ButtonSet.OK);
 }
 
@@ -476,7 +490,9 @@ function limparCampos(id) {
 function acionarLimparCampos() {
   const ui = SpreadsheetApp.getUi();
   const aba = abaPedidos();
-  const valoresPainel = aba.getRange(INTERVALO_PAINEL).getValues().map(l => String(l[0] ?? '').trim());
+  const valoresPainel = aba.getRange(INTERVALO_PAINEL).getValues().map(function(l) {
+    return String(l[0] === undefined || l[0] === null ? '' : l[0]).trim();
+  });
   const idPainel = valoresPainel[0];
   const temDadosFormulario = Boolean(valoresPainel[1] || valoresPainel[2] || valoresPainel[3]);
 
@@ -484,7 +500,7 @@ function acionarLimparCampos() {
   if (temDadosFormulario) {
     aba.getRange(INTERVALO_PAINEL).clearContent();
     registrarLog('Limpar Campos', '-', '-', '-', '', 'Campos do painel (H2:H5) limpos via menu/botão', 'planilha');
-    obterPlanilha().toast('Campos do painel (H2:H5) limpos com sucesso!', '🧹 Limpar Campos', 4);
+    mostrarToast('Campos do painel (H2:H5) limpos com sucesso!', '🧹 Limpar Campos');
     return;
   }
 
@@ -499,7 +515,7 @@ function acionarLimparCampos() {
     if (escolha === ui.Button.CANCEL) return;
     if (escolha === ui.Button.NO) {
       aba.getRange(INTERVALO_PAINEL).clearContent();
-      obterPlanilha().toast('Campo ID do painel limpo.', '🧹 Limpar Campos', 4);
+      mostrarToast('Campo ID do painel limpo.', '🧹 Limpar Campos');
       return;
     }
 
@@ -509,7 +525,7 @@ function acionarLimparCampos() {
       ui.alert('Erro', 'Pedido #' + idPainel + ' não encontrado.', ui.ButtonSet.OK);
       return;
     }
-    obterPlanilha().toast('Campos do pedido #' + res.id + ' limpos!', '🧹 Limpar Campos', 5);
+    mostrarToast('Campos do pedido #' + res.id + ' limpos!', '🧹 Limpar Campos');
     ui.alert('Concluído', 'Os campos do pedido #' + res.id + ' foram limpos (ID mantido).', ui.ButtonSet.OK);
     return;
   }
@@ -530,7 +546,7 @@ function limparPainel() {
   const aba = abaPedidos();
   aba.getRange(INTERVALO_PAINEL).clearContent();
   registrarLog('Limpar Campos', '-', '-', '-', '', 'Campos do painel (H2:H5) limpos', 'planilha');
-  obterPlanilha().toast('Campos do painel (H2:H5) limpos!', '🧹 Limpar Painel', 4);
+  mostrarToast('Campos do painel (H2:H5) limpos!', '🧹 Limpar Painel');
 }
 
 // Limpa os campos (nome, livro e valor) de um pedido específico informado pelo ID.
@@ -538,7 +554,8 @@ function limparCamposPedido() {
   const ui = SpreadsheetApp.getUi();
   const aba = abaPedidos();
 
-  let idTexto = String(aba.getRange(CELULA_ID).getValue() ?? '').trim();
+  const brutoId = aba.getRange(CELULA_ID).getValue();
+  let idTexto = String(brutoId === undefined || brutoId === null ? '' : brutoId).trim();
   if (!idTexto) {
     const resp = ui.prompt(
       '🗑️ Limpar Campos de um Pedido',
@@ -565,7 +582,7 @@ function limparCamposPedido() {
   const resultado = limparCampos(Number(idTexto));
   aba.getRange(INTERVALO_PAINEL).clearContent();
   if (resultado.ok) {
-    obterPlanilha().toast('Campos do pedido #' + resultado.id + ' esvaziados!', '🗑️ Limpar Campos', 5);
+    mostrarToast('Campos do pedido #' + resultado.id + ' esvaziados!', '🗑️ Limpar Campos');
     ui.alert('Sucesso', 'Os campos do pedido #' + resultado.id + ' foram limpos.', ui.ButtonSet.OK);
   }
 }
@@ -575,7 +592,8 @@ function carregarPedidoNoPainel() {
   const ui = SpreadsheetApp.getUi();
   const aba = abaPedidos();
 
-  let idTexto = String(aba.getRange(CELULA_ID).getValue() ?? '').trim();
+  const brutoId = aba.getRange(CELULA_ID).getValue();
+  let idTexto = String(brutoId === undefined || brutoId === null ? '' : brutoId).trim();
   if (!idTexto) {
     const resp = ui.prompt('🔍 Carregar Pedido no Painel', 'Informe o ID do pedido:', ui.ButtonSet.OK_CANCEL);
     if (resp.getSelectedButton() !== ui.Button.OK) return;
@@ -595,7 +613,7 @@ function carregarPedidoNoPainel() {
     [dados[2]],
     [dados[3]]
   ]);
-  obterPlanilha().toast('Pedido #' + dados[0] + ' carregado em H2:H5. Altere e clique em Atualizar!', '🔍 Painel', 6);
+  mostrarToast('Pedido #' + dados[0] + ' carregado em H2:H5. Altere e clique em Atualizar!', '🔍 Painel');
 }
 
 // Apaga TODOS os pedidos (colunas A:E), preservando o cabeçalho e o Painel (G1:H5).
@@ -622,7 +640,7 @@ function limparTudo(confirmadoViaCodigo) {
   registrarLog('Limpar Tudo', '-', '-', '-', '', 'Todos os pedidos da aba Dados foram limpos', 'planilha');
 
   if (arguments.length === 0) {
-    obterPlanilha().toast('Todos os pedidos foram removidos.', '⚠️ Limpar Tudo', 5);
+    mostrarToast('Todos os pedidos foram removidos.', '⚠️ Limpar Tudo');
   }
   return { ok: true };
 }
@@ -650,13 +668,17 @@ function configurarPlanilha() {
   abaLog();
 
   if (arguments.length === 0) {
-    obterPlanilha().toast('Estrutura da planilha verificada e configurada!', '🛠️ Configuração', 5);
+    mostrarToast('Estrutura da planilha verificada e configurada!', '🛠️ Configuração');
   }
 }
 
 // ===============================================================
 // ENTRADA PELA INTERNET (chamada pelo site ao finalizar compra)
 // ===============================================================
+function doGet() {
+  return resposta({ ok: true, status: 'Web App ativo e funcionando!' });
+}
+
 function doPost(e) {
   const lock = LockService.getScriptLock();
   try {
@@ -664,7 +686,10 @@ function doPost(e) {
     const dados = JSON.parse(e.postData.contents);
     return resposta(registrarOperacao(dados.nome, dados.livro, dados.valor, 'site'));
   } catch (erro) {
-    return resposta({ ok: false, erro: 'falha ao registrar' });
+    return resposta({
+      ok: false,
+      erro: 'falha ao registrar: ' + (erro && erro.message ? erro.message : String(erro))
+    });
   } finally {
     if (lock.hasLock()) {
       lock.releaseLock();
