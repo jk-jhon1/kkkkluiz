@@ -5,13 +5,14 @@
  * Como instalar/atualizar na planilha e no site:
  * 1. Na planilha Google ("TRABALHO INDIO"), clique em: Extensões > Apps Script.
  * 2. Apague todo o código antigo do editor, cole TODO este arquivo e salve (Ctrl+S).
- * 3. IMPORTANTE para o site enviar E-mail (Gmail) e Endereço:
+ * 3. IMPORTANTE para o link do site atualizar:
  *    No Apps Script, clique em: Implantar > Gerenciar implantações > ícone de lápis (Editar)
  *    > em "Versão", selecione "Nova versão" > clique em "Implantar".
  *    (O link /exec continua exatamente o mesmo!)
  * 4. Volte na planilha e aperte F5:
- *    - As caixas de botão em J10, J11 e J12 já funcionam na hora!
- *    - Para inserir os 3 botões gráficos flutuantes, clique em:
+ *    - Mesmo antes de reimplantar, ao clicar na planilha ou apertar F5 o script corrige
+ *      automaticamente qualquer linha desalinhada!
+ *    - Para ativar correção automática em segundo plano + 3 botões gráficos, clique em:
  *      "📚 Automação" > "🔘 Inserir os 3 botões na planilha".
  *
  * Funções para botões (Inserir > Desenho > Atribuir script):
@@ -45,6 +46,28 @@ const LINHA_CHECK_ULTIMA = 11;      // J11 -> Apagar Última Linha
 const LINHA_CHECK_TUDO = 12;        // J12 -> Apagar Todos os Dados
 const CHAVE_CACHE_SELECAO = 'ULTIMA_SELECAO_TABELA_DADOS';
 
+const CABECALHO_DADOS = [
+  'ID',
+  'NOME_DO_CLIENTE',
+  'E-MAIL (GMAIL)',
+  'ENDEREÇO',
+  'LIVRO',
+  'VALOR',
+  'ULTIMA ATUALIZAÇÃO'
+];
+
+const CABECALHO_LOG = [
+  'DATA/HORA',
+  'E-MAIL (GMAIL)',
+  'ENDEREÇO',
+  'AÇÃO',
+  'ID',
+  'NOME DO CLIENTE',
+  'LIVRO',
+  'VALOR',
+  'OBSERVAÇÃO'
+];
+
 // Imagens PNG em Base64 para gerar os 3 botões gráficos automaticamente na planilha
 const PNG_BTN_APAGAR_SELECIONADA =
   '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';
@@ -58,24 +81,202 @@ const PNG_BTN_APAGAR_TUDO =
 // ===============================================================
 // MENU PERSONALIZADO (acionado automaticamente ao abrir a planilha)
 // ===============================================================
-function onOpen() {
-  SpreadsheetApp.getUi()
-    .createMenu('📚 Automação')
-    .addItem('🔘 Inserir os 3 botões na planilha', 'criarBotoesNaPlanilha')
-    .addSeparator()
-    .addItem('🎯 Apagar linha selecionada', 'apagarLinhaSelecionada')
-    .addItem('🗑️ Apagar última linha com dados', 'apagarUltimaLinha')
-    .addItem('⚠️ Apagar todos os dados da planilha', 'apagarTodosOsDados')
-    .addSeparator()
-    .addItem('➕ Registrar operação', 'registrarOperacao')
-    .addItem('✏️ Atualizar informações', 'atualizarInformacoes')
-    .addItem('🧹 Limpar campos', 'limparCampos')
-    .addSeparator()
-    .addItem('🔍 Carregar pedido no painel (por ID)', 'carregarPedidoNoPainel')
-    .addItem('🗑️ Limpar campos de um pedido (por ID)', 'limparCamposPedido')
-    .addItem('🧹 Limpar apenas o painel (J2:J7)', 'limparPainel')
-    .addItem('🛠️ Configurar estrutura da planilha', 'configurarPlanilha')
-    .addToUi();
+function onOpen(e) {
+  try {
+    SpreadsheetApp.getUi()
+      .createMenu('📚 Automação')
+      .addItem('🔧 Corrigir alinhamento das colunas agora', 'corrigirPlanilhaManual')
+      .addItem('🔘 Inserir os 3 botões + sincronização automática', 'criarBotoesNaPlanilha')
+      .addSeparator()
+      .addItem('🎯 Apagar linha selecionada', 'apagarLinhaSelecionada')
+      .addItem('🗑️ Apagar última linha com dados', 'apagarUltimaLinha')
+      .addItem('⚠️ Apagar todos os dados da planilha', 'apagarTodosOsDados')
+      .addSeparator()
+      .addItem('➕ Registrar operação', 'registrarOperacao')
+      .addItem('✏️ Atualizar informações', 'atualizarInformacoes')
+      .addItem('🧹 Limpar campos', 'limparCampos')
+      .addSeparator()
+      .addItem('🔍 Carregar pedido no painel (por ID)', 'carregarPedidoNoPainel')
+      .addItem('🗑️ Limpar campos de um pedido (por ID)', 'limparCamposPedido')
+      .addItem('🧹 Limpar apenas o painel (J2:J7)', 'limparPainel')
+      .addItem('🛠️ Configurar estrutura da planilha', 'configurarPlanilha')
+      .addToUi();
+  } catch (err) {}
+
+  try {
+    const ss = (e && e.source) ? e.source : SpreadsheetApp.getActiveSpreadsheet();
+    if (ss) corrigirLinhasDesalinhadas(ss);
+  } catch (err) {}
+}
+
+// ===============================================================
+// AUTO-CORREÇÃO DE LINHAS DESALINHADAS (CASO A IMPLANTAÇÃO ANTIGA RODE)
+// ===============================================================
+function extrairMetadadosLivro(texto) {
+  const bruto = String(texto === undefined || texto === null ? '' : texto).trim();
+  if (!bruto.includes(' || ')) {
+    return { livro: bruto, email: '', endereco: '', pagamento: '' };
+  }
+  const partes = bruto.split(' || ').map(function(p) { return p.trim(); });
+  return {
+    livro: partes[0] || '',
+    email: partes[1] || '',
+    endereco: partes[2] || '',
+    pagamento: partes[3] || ''
+  };
+}
+
+function pareceDataOuTimestamp(valor) {
+  if (valor instanceof Date) return true;
+  const txt = String(valor === undefined || valor === null ? '' : valor).trim();
+  return /^\d{2}\/\d{2}\/\d{4}/.test(txt);
+}
+
+function corrigirLinhasDesalinhadas(planilhaExplicita) {
+  let corrigiuAlgo = false;
+  try {
+    const planilha = planilhaExplicita || SpreadsheetApp.getActiveSpreadsheet();
+    if (!planilha) return false;
+
+    // 1. Verifica e corrige a aba "Dados" (linhas antigas de 5 colunas -> 7 colunas)
+    const aba = planilha.getSheetByName('Dados') || planilha.getSheets()[0];
+    if (aba) {
+      const cabDados = aba.getRange(1, 1, 1, COLUNAS_TABELA).getValues()[0];
+      if (cabDados[0] !== 'ID' || cabDados[2] !== 'E-MAIL (GMAIL)') {
+        aba.getRange(1, 1, 1, COLUNAS_TABELA).setValues([CABECALHO_DADOS]);
+      }
+
+      const maxDados = aba.getLastRow();
+      if (maxDados >= 2) {
+        const blocoDados = aba.getRange(2, 1, maxDados - 1, COLUNAS_TABELA).getValues();
+        for (let i = 0; i < blocoDados.length; i++) {
+          const r = blocoDados[i];
+          const colF = r[5];
+          const colG = r[6];
+          const valorAntigo = converterValor(r[3]);
+          // Linha gravada pelo Web App antigo: F e G vazias, D é número (valor) e E é data/hora
+          if (
+            (colF === '' || colF === null) &&
+            (colG === '' || colG === null) &&
+            r[0] !== '' &&
+            r[3] !== '' &&
+            !isNaN(valorAntigo) &&
+            pareceDataOuTimestamp(r[4])
+          ) {
+            const linPlanilha = i + 2;
+            const meta = extrairMetadadosLivro(r[2]);
+            aba.getRange(linPlanilha, 2, 1, 4).setNumberFormat('@').setHorizontalAlignment('left');
+            aba.getRange(linPlanilha, 1, 1, COLUNAS_TABELA).setValues([[
+              r[0],
+              r[1],
+              meta.email || '-',
+              meta.endereco || '-',
+              meta.livro || r[2],
+              valorAntigo,
+              r[4]
+            ]]);
+            formatarBlocoPedidos(aba, linPlanilha, 1);
+            corrigiuAlgo = true;
+          }
+        }
+      }
+    }
+
+    // 2. Verifica e corrige a aba "Log" (linhas antigas de 8 colunas -> 9 colunas)
+    const log = planilha.getSheetByName('Log');
+    if (log) {
+      const cabLog = log.getRange(1, 1, 1, 9).getValues()[0];
+      if (cabLog[0] !== 'DATA/HORA' || cabLog[1] !== 'E-MAIL (GMAIL)' || cabLog[8] !== 'OBSERVAÇÃO') {
+        log.getRange(1, 1, 1, 9).setValues([CABECALHO_LOG]);
+      }
+
+      const maxLog = log.getLastRow();
+      if (maxLog >= 2) {
+        const blocoLog = log.getRange(2, 1, maxLog - 1, 9).getValues();
+        for (let j = 0; j < blocoLog.length; j++) {
+          const l = blocoLog[j];
+          const ehAntigo =
+            (l[8] === '' || l[8] === null) &&
+            (l[1] === 'Site (Web App)' || l[1] === 'Planilha (Menu/Botão)');
+          if (ehAntigo) {
+            const linLog = j + 2;
+            const metaLog = extrairMetadadosLivro(l[5]);
+            const emailLog =
+              metaLog.email ||
+              (l[1] === 'Planilha (Menu/Botão)' ? (obterEmailUsuarioPlanilha() || 'Usuário da Planilha') : '-');
+            const enderecoLog = metaLog.endereco || '-';
+            const livroLog = metaLog.livro || l[5] || '-';
+            const valorNumLog = (l[6] === '' || l[6] === null || isNaN(converterValor(l[6])))
+              ? ''
+              : converterValor(l[6]);
+            const obsLog = metaLog.pagamento
+              ? ('Pagamento: ' + metaLog.pagamento + ' — Pedido pelo site')
+              : (String(l[7] || '').replace('automaticamente ', '') || 'Pedido recebido pelo site');
+
+            log.getRange(linLog, 2, 1, 3).setNumberFormat('@').setHorizontalAlignment('left');
+            log.getRange(linLog, 6, 1, 2).setNumberFormat('@').setHorizontalAlignment('left');
+            log.getRange(linLog, 9, 1, 1).setNumberFormat('@').setHorizontalAlignment('left');
+            log.getRange(linLog, 1).setNumberFormat('dd/mm/yyyy hh:mm:ss').setHorizontalAlignment('center');
+            log.getRange(linLog, 5).setNumberFormat('0').setHorizontalAlignment('center');
+            if (valorNumLog !== '') {
+              log.getRange(linLog, 8).setNumberFormat('R$ #,##0.00').setHorizontalAlignment('center');
+            }
+
+            const intervaloLog = log.getRange(linLog, 1, 1, 9);
+            intervaloLog.setValues([[
+              l[0],
+              emailLog,
+              enderecoLog,
+              l[2] || 'Registro pelo Site',
+              l[3] || '-',
+              l[4] || '-',
+              livroLog,
+              valorNumLog,
+              obsLog
+            ]]);
+            try {
+              intervaloLog.setBorder(true, true, true, true, true, true);
+            } catch (e) {}
+            corrigiuAlgo = true;
+          }
+        }
+      }
+    }
+  } catch (err) {
+    Logger.log('Aviso ao alinhar linhas: ' + err);
+  }
+  return corrigiuAlgo;
+}
+
+function sincronizarAutomaticamente() {
+  const planilha = obterPlanilha(true);
+  corrigirLinhasDesalinhadas(planilha);
+}
+
+function corrigirPlanilhaManual() {
+  const planilha = obterPlanilha(false);
+  corrigirLinhasDesalinhadas(planilha);
+  instalarGatilhoAutomatico(planilha);
+  mostrarToast('Colunas das abas Dados e Log verificadas e alinhadas!', '🔧 Alinhamento Concluído', planilha);
+}
+
+function instalarGatilhoAutomatico(planilha) {
+  try {
+    if (typeof ScriptApp === 'undefined' || !ScriptApp.getProjectTriggers) return;
+    const gatilhos = ScriptApp.getProjectTriggers();
+    for (let i = 0; i < gatilhos.length; i++) {
+      if (gatilhos[i].getHandlerFunction() === 'sincronizarAutomaticamente') {
+        return; // Já instalado
+      }
+    }
+    const alvo = planilha || obterPlanilha(false);
+    ScriptApp.newTrigger('sincronizarAutomaticamente')
+      .forSpreadsheet(alvo)
+      .onChange()
+      .create();
+  } catch (e) {
+    // Sem permissão em gatilho simples; funciona normalmente quando chamado pelo menu
+  }
 }
 
 // ===============================================================
@@ -142,6 +343,11 @@ function extrairLinhasDeIntervalos(intervalos) {
 function onSelectionChange(e) {
   if (!e || !e.range) return;
   const aba = e.range.getSheet();
+  try {
+    const ss = e.source || aba.getParent();
+    if (ss) corrigirLinhasDesalinhadas(ss);
+  } catch (err) {}
+
   if (aba.getName() !== 'Dados' && aba.getIndex() !== 1) return;
 
   let intervalos = [e.range];
@@ -163,6 +369,8 @@ function onSelectionChange(e) {
 // ===============================================================
 function onEdit(e) {
   if (!e || !e.range || !e.source) return;
+  corrigirLinhasDesalinhadas(e.source);
+
   const aba = e.range.getSheet();
   const nomeAba = aba.getName();
   if (nomeAba !== 'Dados' && aba.getIndex() !== 1) return;
@@ -204,7 +412,11 @@ function onEdit(e) {
 // CRIA OS 3 BOTÕES GRÁFICOS CLICÁVEIS NA PLANILHA
 // ===============================================================
 function criarBotoesNaPlanilha() {
-  const aba = abaPedidos();
+  const planilha = obterPlanilha(false);
+  corrigirLinhasDesalinhadas(planilha);
+  instalarGatilhoAutomatico(planilha);
+
+  const aba = abaPedidos(false, planilha);
 
   // Remove versões anteriores dos mesmos botões para não duplicar
   const imagens = aba.getImages();
@@ -249,7 +461,7 @@ function criarBotoesNaPlanilha() {
   imgTudo.assignScript('apagarTodosOsDados');
   imgTudo.setAltTextTitle('BTN_APAGAR_TUDO');
 
-  mostrarToast('Os 3 botões gráficos foram inseridos em I14, I17 e I20!', '🔘 Botões Criados');
+  mostrarToast('Os 3 botões gráficos e a sincronização automática foram ativados!', '🔘 Botões Criados', planilha);
 }
 
 // ===============================================================
@@ -299,17 +511,7 @@ function abaLog(forcarPorId, planilhaExplicita) {
   let log = planilha.getSheetByName('Log');
   if (!log) {
     log = planilha.insertSheet('Log');
-    log.getRange(1, 1, 1, 9).setValues([[
-      'DATA/HORA',
-      'E-MAIL (GMAIL)',
-      'ENDEREÇO',
-      'AÇÃO',
-      'ID',
-      'NOME DO CLIENTE',
-      'LIVRO',
-      'VALOR',
-      'OBSERVAÇÃO'
-    ]]);
+    log.getRange(1, 1, 1, 9).setValues([CABECALHO_LOG]);
   }
   return log;
 }
@@ -327,9 +529,10 @@ function registrarLog(acao, id, nome, livro, valor, observacao, origem, planilha
       (origem === 'site' ? 'Sem e-mail informado' : 'Usuário da Planilha');
     const enderecoFinal = textoSeguro(endereco, 200) || '-';
 
-    log.getRange(linha, 2, 1, 2).setNumberFormat('@');
-    log.getRange(linha, 6, 1, 2).setNumberFormat('@');
-    log.getRange(linha, 1).setNumberFormat('dd/mm/yyyy hh:mm:ss');
+    log.getRange(linha, 2, 1, 3).setNumberFormat('@').setHorizontalAlignment('left');
+    log.getRange(linha, 6, 1, 2).setNumberFormat('@').setHorizontalAlignment('left');
+    log.getRange(linha, 9, 1, 1).setNumberFormat('@').setHorizontalAlignment('left');
+    log.getRange(linha, 1).setNumberFormat('dd/mm/yyyy hh:mm:ss').setHorizontalAlignment('center');
     if (valorCelula !== '') {
       log.getRange(linha, 8).setNumberFormat('R$ #,##0.00');
     }
@@ -434,11 +637,13 @@ function formatarBlocoPedidos(aba, linhaInicial, qtdLinhas) {
 // BOTÃO 1: APAGAR A(S) LINHA(S) SELECIONADA(S) NA TABELA
 // ===============================================================
 function executarApagarLinhasSelecionadas(linhasAlvo, planilhaExplicita) {
-  const aba = abaPedidos(false, planilhaExplicita);
+  const planilha = obterPlanilha(false, planilhaExplicita);
+  corrigirLinhasDesalinhadas(planilha);
+  const aba = abaPedidos(false, planilha);
   const estado = estadoTabelaPedidos(aba);
 
   if (estado.ultimaLinha <= 1) {
-    mostrarToast('Não há dados na tabela para apagar.', '🎯 Apagar Linha Selecionada', planilhaExplicita);
+    mostrarToast('Não há dados na tabela para apagar.', '🎯 Apagar Linha Selecionada', planilha);
     return { ok: false, erro: 'planilha vazia' };
   }
 
@@ -469,7 +674,7 @@ function executarApagarLinhasSelecionadas(linhasAlvo, planilhaExplicita) {
     mostrarToast(
       'A linha selecionada está vazia. Selecione uma linha com dados nas colunas A:G.',
       '🎯 Apagar Linha Selecionada',
-      planilhaExplicita
+      planilha
     );
     return { ok: false, erro: 'a linha selecionada está vazia' };
   }
@@ -499,7 +704,7 @@ function executarApagarLinhasSelecionadas(linhasAlvo, planilhaExplicita) {
       d[5],
       'Linha ' + item.linha + ' apagada ao selecionar na planilha',
       'planilha',
-      planilhaExplicita,
+      planilha,
       d[2] !== '-' ? d[2] : '',
       d[3]
     );
@@ -511,7 +716,7 @@ function executarApagarLinhasSelecionadas(linhasAlvo, planilhaExplicita) {
       ? 'Linha ' + descLinhas + ' apagada com sucesso!'
       : 'Linhas ' + descLinhas + ' apagadas com sucesso!',
     '🎯 Apagar Linha Selecionada',
-    planilhaExplicita
+    planilha
   );
 
   return {
@@ -522,7 +727,9 @@ function executarApagarLinhasSelecionadas(linhasAlvo, planilhaExplicita) {
 }
 
 function apagarLinhaSelecionada() {
-  const aba = abaPedidos();
+  const planilha = obterPlanilha(false);
+  corrigirLinhasDesalinhadas(planilha);
+  const aba = abaPedidos(false, planilha);
   let intervalos = [];
 
   try {
@@ -553,7 +760,7 @@ function apagarLinhaSelecionada() {
   }
 
   limparSelecaoRecente();
-  const resultado = executarApagarLinhasSelecionadas(linhas);
+  const resultado = executarApagarLinhasSelecionadas(linhas, planilha);
   if (!resultado.ok && arguments.length === 0) {
     try {
       const ui = SpreadsheetApp.getUi();
@@ -573,11 +780,13 @@ function apagarLinhaSelecionada() {
 // BOTÃO 2: APAGAR A ÚLTIMA LINHA QUE TEM INFORMAÇÕES
 // ===============================================================
 function executarApagarUltimaLinha(planilhaExplicita) {
-  const aba = abaPedidos(false, planilhaExplicita);
+  const planilha = obterPlanilha(false, planilhaExplicita);
+  corrigirLinhasDesalinhadas(planilha);
+  const aba = abaPedidos(false, planilha);
   const estado = estadoTabelaPedidos(aba);
 
   if (estado.ultimaLinha <= 1) {
-    mostrarToast('Não há nenhuma linha com informações para apagar.', '🗑️ Apagar Última Linha', planilhaExplicita);
+    mostrarToast('Não há nenhuma linha com informações para apagar.', '🗑️ Apagar Última Linha', planilha);
     return { ok: false, erro: 'nenhuma linha com informações' };
   }
 
@@ -598,7 +807,7 @@ function executarApagarUltimaLinha(planilhaExplicita) {
     removidos[5],
     'Última linha preenchida (linha ' + linhaAlvo + ') apagada via botão',
     'planilha',
-    planilhaExplicita,
+    planilha,
     removidos[2] !== '-' ? removidos[2] : '',
     removidos[3]
   );
@@ -606,7 +815,7 @@ function executarApagarUltimaLinha(planilhaExplicita) {
   mostrarToast(
     'Linha ' + linhaAlvo + ' apagada com sucesso!',
     '🗑️ Apagar Última Linha',
-    planilhaExplicita
+    planilha
   );
   return { ok: true, linha: linhaAlvo, id: removidos[0] };
 }
@@ -626,7 +835,9 @@ function apagarUltimaLinha() {
 // BOTÃO 3: APAGAR TODOS OS DADOS DA PLANILHA
 // ===============================================================
 function executarApagarTodosOsDados(planilhaExplicita) {
-  const aba = abaPedidos(false, planilhaExplicita);
+  const planilha = obterPlanilha(false, planilhaExplicita);
+  corrigirLinhasDesalinhadas(planilha);
+  const aba = abaPedidos(false, planilha);
   const estado = estadoTabelaPedidos(aba);
 
   if (estado.ultimaLinha > 1) {
@@ -649,10 +860,10 @@ function executarApagarTodosOsDados(planilhaExplicita) {
     '',
     'Todos os dados da planilha foram apagados via botão',
     'planilha',
-    planilhaExplicita
+    planilha
   );
 
-  mostrarToast('Todos os dados da planilha foram apagados!', '⚠️ Apagar Todos os Dados', planilhaExplicita);
+  mostrarToast('Todos os dados da planilha foram apagados!', '⚠️ Apagar Todos os Dados', planilha);
   return { ok: true };
 }
 
@@ -688,8 +899,9 @@ function registrarOperacao(nome, livro, valor, origem, email, endereco, pagament
     return acionarRegistrarOperacao();
   }
 
+  const meta = extrairMetadadosLivro(livro);
   const nomeLimpo = textoSeguro(nome, 80);
-  const livroLimpo = textoSeguro(livro, 300);
+  const livroLimpo = textoSeguro(meta.livro || livro, 300);
   const valorNum = converterValor(valor);
 
   if (!nomeLimpo || !livroLimpo || isNaN(valorNum) || !(valorNum >= 0)) {
@@ -697,17 +909,21 @@ function registrarOperacao(nome, livro, valor, origem, email, endereco, pagament
   }
 
   const ehSite = origem === 'site';
-  const emailLimpo = textoSeguro(email, 120) || (!ehSite ? obterEmailUsuarioPlanilha() : '');
-  const enderecoLimpo = textoSeguro(endereco, 200);
-  const pagamentoLimpo = textoSeguro(pagamento, 40);
+  const emailLimpo =
+    textoSeguro(email || meta.email, 120) ||
+    (!ehSite ? obterEmailUsuarioPlanilha() : '');
+  const enderecoLimpo = textoSeguro(endereco || meta.endereco, 200);
+  const pagamentoLimpo = textoSeguro(pagamento || meta.pagamento, 40);
 
-  const aba = abaPedidos(ehSite);
+  const planilha = obterPlanilha(ehSite);
+  corrigirLinhasDesalinhadas(planilha);
+  const aba = abaPedidos(ehSite, planilha);
   const estado = estadoTabelaPedidos(aba);
   const linha = estado.ultimaLinha + 1;
   const id = estado.proximoId;
   const agora = new Date();
 
-  aba.getRange(linha, 2, 1, 4).setNumberFormat('@');
+  aba.getRange(linha, 2, 1, 4).setNumberFormat('@').setHorizontalAlignment('left');
   aba.getRange(linha, 1, 1, COLUNAS_TABELA).setValues([[
     id,
     nomeLimpo,
@@ -731,17 +947,19 @@ function registrarOperacao(nome, livro, valor, origem, email, endereco, pagament
     valorNum,
     obs,
     origem,
-    null,
+    planilha,
     emailLimpo,
     enderecoLimpo
   );
 
-  return { ok: true, id: id };
+  return { ok: true, id: id, versao: 2 };
 }
 
 function acionarRegistrarOperacao() {
   const ui = SpreadsheetApp.getUi();
-  const aba = abaPedidos();
+  const planilha = obterPlanilha(false);
+  corrigirLinhasDesalinhadas(planilha);
+  const aba = abaPedidos(false, planilha);
 
   let nome = textoSeguro(aba.getRange(CELULA_NOME).getValue(), 80);
   let email = textoSeguro(aba.getRange(CELULA_EMAIL).getValue(), 120);
@@ -791,7 +1009,7 @@ function acionarRegistrarOperacao() {
   }
 
   aba.getRange(INTERVALO_PAINEL).clearContent();
-  mostrarToast('Pedido #' + resultado.id + ' registrado com sucesso!', '📚 Automação');
+  mostrarToast('Pedido #' + resultado.id + ' registrado com sucesso!', '📚 Automação', planilha);
   ui.alert('Sucesso!', 'Operação registrada com sucesso (ID #' + resultado.id + ').', ui.ButtonSet.OK);
 }
 
@@ -807,7 +1025,9 @@ function atualizarInformacoes(id, campos) {
     return { ok: false, erro: 'campos inválidos' };
   }
 
-  const aba = abaPedidos();
+  const planilha = obterPlanilha(false);
+  corrigirLinhasDesalinhadas(planilha);
+  const aba = abaPedidos(false, planilha);
   const linha = acharLinha(aba, id);
   if (!linha) return { ok: false, erro: 'pedido não encontrado' };
 
@@ -864,7 +1084,7 @@ function atualizarInformacoes(id, campos) {
     atualizado[5],
     'Informações atualizadas via menu/botão',
     'planilha',
-    null,
+    planilha,
     atualizado[2] !== '-' ? atualizado[2] : '',
     atualizado[3]
   );
@@ -874,7 +1094,9 @@ function atualizarInformacoes(id, campos) {
 
 function acionarAtualizarInformacoes() {
   const ui = SpreadsheetApp.getUi();
-  const aba = abaPedidos();
+  const planilha = obterPlanilha(false);
+  corrigirLinhasDesalinhadas(planilha);
+  const aba = abaPedidos(false, planilha);
 
   const brutoId = aba.getRange(CELULA_ID).getValue();
   let idTexto = String(brutoId === undefined || brutoId === null ? '' : brutoId).trim();
@@ -907,7 +1129,7 @@ function acionarAtualizarInformacoes() {
     }
 
     aba.getRange(INTERVALO_PAINEL).clearContent();
-    mostrarToast('Pedido #' + resPainel.id + ' atualizado!', '📚 Automação');
+    mostrarToast('Pedido #' + resPainel.id + ' atualizado!', '📚 Automação', planilha);
     ui.alert('Sucesso!', 'Informações do pedido #' + resPainel.id + ' atualizadas com sucesso.', ui.ButtonSet.OK);
     return;
   }
@@ -986,7 +1208,7 @@ function acionarAtualizarInformacoes() {
   }
 
   aba.getRange(INTERVALO_PAINEL).clearContent();
-  mostrarToast('Pedido #' + resultado.id + ' atualizado!', '📚 Automação');
+  mostrarToast('Pedido #' + resultado.id + ' atualizado!', '📚 Automação', planilha);
   ui.alert('Sucesso!', 'Informações do pedido #' + resultado.id + ' atualizadas com sucesso.', ui.ButtonSet.OK);
 }
 
@@ -998,7 +1220,9 @@ function limparCampos(id) {
     return acionarLimparCampos();
   }
 
-  const aba = abaPedidos();
+  const planilha = obterPlanilha(false);
+  corrigirLinhasDesalinhadas(planilha);
+  const aba = abaPedidos(false, planilha);
   const linha = acharLinha(aba, id);
   if (!linha) return { ok: false, erro: 'pedido não encontrado' };
 
@@ -1016,7 +1240,7 @@ function limparCampos(id) {
     antes[5],
     'Campos do pedido #' + antes[0] + ' esvaziados via procedimento',
     'planilha',
-    null,
+    planilha,
     antes[2] !== '-' ? antes[2] : '',
     antes[3]
   );
@@ -1026,7 +1250,9 @@ function limparCampos(id) {
 
 function acionarLimparCampos() {
   const ui = SpreadsheetApp.getUi();
-  const aba = abaPedidos();
+  const planilha = obterPlanilha(false);
+  corrigirLinhasDesalinhadas(planilha);
+  const aba = abaPedidos(false, planilha);
   const valoresPainel = aba.getRange(INTERVALO_PAINEL).getValues().map(function(l) {
     return String(l[0] === undefined || l[0] === null ? '' : l[0]).trim();
   });
@@ -1035,8 +1261,8 @@ function acionarLimparCampos() {
 
   if (temDadosFormulario) {
     aba.getRange(INTERVALO_PAINEL).clearContent();
-    registrarLog('Limpar Campos', '-', '-', '-', '', 'Campos do painel (J2:J7) limpos via menu/botão', 'planilha');
-    mostrarToast('Campos do painel (J2:J7) limpos com sucesso!', '🧹 Limpar Campos');
+    registrarLog('Limpar Campos', '-', '-', '-', '', 'Campos do painel (J2:J7) limpos via menu/botão', 'planilha', planilha);
+    mostrarToast('Campos do painel (J2:J7) limpos com sucesso!', '🧹 Limpar Campos', planilha);
     return;
   }
 
@@ -1050,7 +1276,7 @@ function acionarLimparCampos() {
     if (escolha === ui.Button.CANCEL) return;
     if (escolha === ui.Button.NO) {
       aba.getRange(INTERVALO_PAINEL).clearContent();
-      mostrarToast('Campo ID do painel limpo.', '🧹 Limpar Campos');
+      mostrarToast('Campo ID do painel limpo.', '🧹 Limpar Campos', planilha);
       return;
     }
 
@@ -1060,7 +1286,7 @@ function acionarLimparCampos() {
       ui.alert('Erro', 'Pedido #' + idPainel + ' não encontrado.', ui.ButtonSet.OK);
       return;
     }
-    mostrarToast('Campos do pedido #' + res.id + ' limpos!', '🧹 Limpar Campos');
+    mostrarToast('Campos do pedido #' + res.id + ' limpos!', '🧹 Limpar Campos', planilha);
     ui.alert('Concluído', 'Os campos do pedido #' + res.id + ' foram limpos (ID mantido).', ui.ButtonSet.OK);
     return;
   }
@@ -1076,15 +1302,19 @@ function acionarLimparCampos() {
 }
 
 function limparPainel() {
-  const aba = abaPedidos();
+  const planilha = obterPlanilha(false);
+  corrigirLinhasDesalinhadas(planilha);
+  const aba = abaPedidos(false, planilha);
   aba.getRange(INTERVALO_PAINEL).clearContent();
-  registrarLog('Limpar Campos', '-', '-', '-', '', 'Campos do painel (J2:J7) limpos', 'planilha');
-  mostrarToast('Campos do painel (J2:J7) limpos!', '🧹 Limpar Painel');
+  registrarLog('Limpar Campos', '-', '-', '-', '', 'Campos do painel (J2:J7) limpos', 'planilha', planilha);
+  mostrarToast('Campos do painel (J2:J7) limpos!', '🧹 Limpar Painel', planilha);
 }
 
 function limparCamposPedido() {
   const ui = SpreadsheetApp.getUi();
-  const aba = abaPedidos();
+  const planilha = obterPlanilha(false);
+  corrigirLinhasDesalinhadas(planilha);
+  const aba = abaPedidos(false, planilha);
 
   const brutoId = aba.getRange(CELULA_ID).getValue();
   let idTexto = String(brutoId === undefined || brutoId === null ? '' : brutoId).trim();
@@ -1114,14 +1344,16 @@ function limparCamposPedido() {
   const resultado = limparCampos(Number(idTexto));
   aba.getRange(INTERVALO_PAINEL).clearContent();
   if (resultado.ok) {
-    mostrarToast('Campos do pedido #' + resultado.id + ' esvaziados!', '🗑️ Limpar Campos');
+    mostrarToast('Campos do pedido #' + resultado.id + ' esvaziados!', '🗑️ Limpar Campos', planilha);
     ui.alert('Sucesso', 'Os campos do pedido #' + resultado.id + ' foram limpos.', ui.ButtonSet.OK);
   }
 }
 
 function carregarPedidoNoPainel() {
   const ui = SpreadsheetApp.getUi();
-  const aba = abaPedidos();
+  const planilha = obterPlanilha(false);
+  corrigirLinhasDesalinhadas(planilha);
+  const aba = abaPedidos(false, planilha);
 
   const brutoId = aba.getRange(CELULA_ID).getValue();
   let idTexto = String(brutoId === undefined || brutoId === null ? '' : brutoId).trim();
@@ -1146,20 +1378,16 @@ function carregarPedidoNoPainel() {
     [dados[4]],
     [dados[5]]
   ]);
-  mostrarToast('Pedido #' + dados[0] + ' carregado em J2:J7. Altere e clique em Atualizar!', '🔍 Painel');
+  mostrarToast('Pedido #' + dados[0] + ' carregado em J2:J7. Altere e clique em Atualizar!', '🔍 Painel', planilha);
 }
 
 function configurarPlanilha() {
-  const aba = abaPedidos();
-  aba.getRange('A1:G1').setValues([[
-    'ID',
-    'NOME_DO_CLIENTE',
-    'E-MAIL (GMAIL)',
-    'ENDEREÇO',
-    'LIVRO',
-    'VALOR',
-    'ULTIMA ATUALIZAÇÃO'
-  ]]);
+  const planilha = obterPlanilha(false);
+  corrigirLinhasDesalinhadas(planilha);
+  instalarGatilhoAutomatico(planilha);
+
+  const aba = abaPedidos(false, planilha);
+  aba.getRange('A1:G1').setValues([CABECALHO_DADOS]);
   aba.getRange('I1:J7').setValues([
     ['PAINEL DE OPERAÇÕES', ''],
     ['ID (atualizar/limpar)', ''],
@@ -1181,23 +1409,13 @@ function configurarPlanilha() {
   aba.getRange('I9:J9').merge();
   aba.getRange('J10:J12').insertCheckboxes();
 
-  const log = abaLog();
-  log.getRange('A1:I1').setValues([[
-    'DATA/HORA',
-    'E-MAIL (GMAIL)',
-    'ENDEREÇO',
-    'AÇÃO',
-    'ID',
-    'NOME DO CLIENTE',
-    'LIVRO',
-    'VALOR',
-    'OBSERVAÇÃO'
-  ]]);
+  const log = abaLog(false, planilha);
+  log.getRange('A1:I1').setValues([CABECALHO_LOG]);
 
   criarBotoesNaPlanilha();
 
   if (arguments.length === 0) {
-    mostrarToast('Estrutura e botões configurados!', '🛠️ Configuração');
+    mostrarToast('Estrutura e botões configurados!', '🛠️ Configuração', planilha);
   }
 }
 
@@ -1205,7 +1423,7 @@ function configurarPlanilha() {
 // ENTRADA PELA INTERNET (chamada pelo site ao finalizar compra)
 // ===============================================================
 function doGet() {
-  return resposta({ ok: true, status: 'Web App ativo e funcionando!' });
+  return resposta({ ok: true, versao: 2, status: 'Web App ativo e funcionando!' });
 }
 
 function doPost(e) {
@@ -1213,15 +1431,16 @@ function doPost(e) {
   try {
     lock.waitLock(10000);
     const dados = JSON.parse(e.postData.contents);
+    const meta = extrairMetadadosLivro(dados.livro);
     return resposta(
       registrarOperacao(
         dados.nome,
-        dados.livro,
+        dados.livroLimpo || meta.livro || dados.livro,
         dados.valor,
         'site',
-        dados.email,
-        dados.endereco,
-        dados.pagamento
+        dados.email || meta.email,
+        dados.endereco || meta.endereco,
+        dados.pagamento || meta.pagamento
       )
     );
   } catch (erro) {

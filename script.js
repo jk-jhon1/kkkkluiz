@@ -341,6 +341,8 @@ formCheckout.addEventListener('submit', async (e) => {
       const livro = livros.find(l => l.id === item.id);
       return `${item.qtd}x ${livro.titulo}`;
     }).join('; ');
+    const livroResumo = livrosTexto.length > 140 ? `${livrosTexto.slice(0, 137)}...` : livrosTexto;
+    const livroComDados = `${livroResumo} || ${email.slice(0, 60)} || ${endereco.slice(0, 70)} || ${pagamento.slice(0, 15)}`;
     const valor = Math.round(Number(document.getElementById('total').textContent) * 100) / 100;
 
     try {
@@ -352,7 +354,8 @@ formCheckout.addEventListener('submit', async (e) => {
           email: email,
           endereco: endereco,
           pagamento: pagamento,
-          livro: livrosTexto,
+          livro: livroComDados,
+          livroLimpo: livrosTexto,
           valor: valor
         })
       });
