@@ -1,0 +1,159 @@
+:root {
+    --cor-primaria: #183c63;
+    --cor-secundaria: #3a638e;
+    --cor-fundo: #FFFFFF;
+    --cor-texto: #151428;
+    --cor-contraste: #f3eef7;
+    --cor-botao: #2563eb;
+    --fonte-texto:
+}
+body {
+    max-width: 100vw;
+    font-family: 'Segoe UI', sans-serif;
+}
+header {
+    background-color: var(--cor-primaria);
+    color: var(--cor-contraste);
+    text-align: center;
+    margin: 0 auto;
+    padding: 16px;
+}
+main {
+    background-color: var(--cor-fundo);
+    color: var(--cor-primaria);
+    margin: 0 auto 
+}
+article {
+    display: flex;
+
+    border: 1px solid var(--cor-primaria);
+
+    margin: 16px;
+    gap: 16px;
+    padding: 16px;
+}
+img {
+    width: 200px;
+    height: auto;
+    aspect-ratio: 2 / 3;   /* todas as capas na mesma proporção */
+    object-fit: cover;     /* preenche o quadro cortando o excesso, sem esticar */
+    flex-shrink: 0;        /* não deixa o flex do card espremer a imagem */
+    align-self: flex-start; /* não deixa o flex esticar a altura até a do texto */
+}
+.img-thumb {
+    width: 80px;           /* miniatura do carrinho */
+}
+.artigo-autor {
+    font-weight: 600;
+}
+.seu-meu-btn {
+    position: fixed;
+    top: 100px;
+    right: 100px;
+    z-index: 9980;
+}
+section {
+  min-height: 100vh;
+  padding: 40px;
+}
+.container-preco {
+    display: inline;
+    align-items: center;
+    gap: 15px; 
+    margin-top: 10px;
+}
+.botao-carrinho {
+    background-color: #28a745;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: bold;
+}
+footer {
+    width: 100%;
+    background-color: #FFFFFF;
+    padding: 20px 0;
+}
+
+.container-carrinho-footer {
+    display: flex;
+    flex-direction: column; 
+    align-items: center;  
+    color: var(--cor-contraste);
+}
+
+/* ---------- Modal de finalizar compra ---------- */
+.modal {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+}
+.modal[hidden] {
+    display: none;
+}
+.modal-conteudo {
+    position: relative;
+    background: #fff;
+    color: var(--cor-texto);
+    width: min(440px, 92vw);
+    max-height: 90vh;
+    overflow-y: auto;
+    padding: 24px;
+    border-radius: 8px;
+}
+.modal-fechar {
+    position: absolute;
+    top: 10px;
+    right: 12px;
+    border: none;
+    background: none;
+    font-size: 1.2rem;
+    cursor: pointer;
+}
+.modal-conteudo form {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+.modal-conteudo form[hidden],
+.modal-conteudo [hidden] {
+    display: none;
+}
+.modal-conteudo label {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-weight: 600;
+}
+.modal-conteudo input,
+.modal-conteudo select {
+    padding: 8px;
+    font-size: 1rem;
+}
+.btn-confirmar {
+    background-color: #28a745;
+    color: #fff;
+    border: none;
+    padding: 10px;
+    border-radius: 6px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+/* ---------- Modal de detalhes do livro ---------- */
+.modal-conteudo .detalhes-capa {
+    width: 160px;
+    height: auto;
+    display: block;
+    margin: 0 auto 12px;
+}
+.detalhes-preco {
+    font-size: 1.4rem;
+    font-weight: bold;
+}
