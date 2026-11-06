@@ -6,13 +6,15 @@
  * 1. Na planilha Google ("TRABALHO INDIO"), clique em: Extensões > Apps Script.
  * 2. Apague todo o código antigo do editor, cole TODO este arquivo e salve (Ctrl+S).
  * 3. Recarregue a planilha (F5):
- *    - As caixas de botão em H8 ("Apagar Última Linha") e H9 ("Apagar Todos os Dados") já funcionam na hora!
- *    - Para inserir também os 2 botões gráficos flutuantes na aba Dados, clique no menu do topo:
- *      "📚 Automação" > "🔘 Inserir os 2 botões na planilha".
+ *    - As caixas de botão em H8 ("Apagar Linha Selecionada"), H9 ("Apagar Última Linha")
+ *      e H10 ("Apagar Todos os Dados") já funcionam na hora!
+ *    - Para inserir também os 3 botões gráficos flutuantes na aba Dados, clique no menu do topo:
+ *      "📚 Automação" > "🔘 Inserir os 3 botões na planilha".
  * 4. Se quiser atualizar também a versão do site (sem mudar o link):
  *    Implantar > Gerenciar implantações > lápis (Editar) > Versão: "Nova versão" > Implantar.
  *
  * Funções para botões (Inserir > Desenho > Atribuir script):
+ *   - apagarLinhaSelecionada -> apaga a(s) linha(s) selecionada(s) na tabela (A:E)
  *   - apagarUltimaLinha      -> apaga a última linha preenchida da tabela (A:E)
  *   - apagarTodosOsDados     -> apaga todos os dados registrados na tabela (A:E)
  *   - registrarOperacao      -> registra uma operação
@@ -28,11 +30,16 @@ const CELULA_NOME = 'H3';
 const CELULA_LIVRO = 'H4';
 const CELULA_VALOR = 'H5';
 const INTERVALO_PAINEL = 'H2:H5';
-const LINHA_CHECK_ULTIMA = 8; // H8 -> Apagar Última Linha
-const LINHA_CHECK_TUDO = 9;   // H9 -> Apagar Todos os Dados
-const COLUNA_PAINEL_INPUT = 8; // Coluna H
+const LINHA_CHECK_SELECIONADA = 8; // H8  -> Apagar Linha Selecionada
+const LINHA_CHECK_ULTIMA = 9;      // H9  -> Apagar Última Linha
+const LINHA_CHECK_TUDO = 10;       // H10 -> Apagar Todos os Dados
+const COLUNA_PAINEL_INPUT = 8;     // Coluna H
+const CHAVE_CACHE_SELECAO = 'ULTIMA_SELECAO_TABELA_DADOS';
 
-// Imagens PNG em Base64 para gerar os 2 botões gráficos automaticamente na planilha
+// Imagens PNG em Base64 para gerar os 3 botões gráficos automaticamente na planilha
+const PNG_BTN_APAGAR_SELECIONADA =
+  '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';
+
 const PNG_BTN_APAGAR_ULTIMA =
   'iVBORw0KGgoAAAANSUhEUgAAAOYAAAAoCAMAAADdVnZNAAACBFBMVEX////CQQzDQQzQSQzcUAzfUgzgUgzVTAzoVgzqWAzVSwzqWxH75Nf518TqXRP0q4X74tXrYhv97+n////xlGP3wKP4ybD74NL3w6jrZR/4zbf2uJn4zrj62srvhk/rYBj+9/T++/rrZiDym2798ev86uDzpHv1so/507/99fDwi1b2upr++PX86N30qYPsbiz50r775NjxkmDufEH0rIb51sP++/nxlGT74tb98uz51cL++vjtcC/0qYL98er0ron99fHwiVTzpn7++ff63M32upv1sY375dn3v6L+/fztdTb62Mb3wqf2uJjymGnqWxD75tr86+L3wKT98Or+/v7618XwiVPzpX386d/1tpX+/Pv5z7r97+j98+787uf50Lvvg0r99O/qXhX51MH75tvtdjfvgUjtdznvf0b0r4r628vqWQ3qXxb3xqzvhU3sby7vh1D3xq3ynnLtdDT1tJPsaibtdjj87eb3waXymGr3xav4ybH0rYj+/f3ymWv4x67saSXxkF3xl2jxlmbuf0X++fbrYRr749bwjFj4y7PvhEzwiFLqXBLxkV/uej7qXxfxk2L4y7TynHDwjlvvgkn87OP1tpb4yrL63s/0qIH50bzwjVn1tZT98+3sbi3uej399vL87OT2u5zrZB7sbCr62cfrYxz1s5D508D2vJ7ynG/qWg9CeMHqAAAAAXRSTlMAQObYZgAAAxxJREFUaN7tmodTE1EQxjlSNyAiXxBEIyBBQQJIF1BBY0MIAtIFUbGjIhYUMaIIauyCIvaC3X/Sd5dyaY6gl9x45zeTmc3O7tv95W1eZu4lJkZN4hQrP8hYjtNodXrFSafVcFysuJUGIylURpN3Q2M5rdzNRFJaz35yJrk7iawMnHtkFTuxbhmFseU0cvcRaWkETEV/M3lpBUyd3G1EWjoBUy93G5GW/j+mpIqLX5SgAszFiUvko4z+0CbBHGLNN2MBSX+HmQws/YMqKUglWga+Rb7PNCxnzhWWlb9PCo6LCmZ6BpC5aiHrx/0ac16fTbCigpkFazZWC9XW5OTGryXKy7Zl5hcwT+G6jKJioET0JKG0rLwiDOZ6MFUKHVeioKrasmGjdVMN+S0WgMnH8fVq8zfzb7ak2XkjMFZazK3Yth07hNK2mp2o20X1DQWOajTS7iY0t+zhMb0eFtPa1tAeBrOjEyldNR7M7r096N3XB+wnMTUMZqYjBwcOMqOu/xBvBMZKinkYOHIUOMaXPk50Al2UQAMnW3CKTgODdIbH9HpYzFDAxgQPrRszj84C5ygRHSSmhsE8TxeAYWYk0yBvBMZKiunAxQEqwiW+9AjRZYzSlWYnm8AqaoSd+EZKfB4Wc1WcgjGia8D1UMxxKoaNqA1san2pYTBvUDowwYxGtxEYKyVmQi8ETd5k1RxEt9B1G5MVEy5W7Q5QSHcZps/jf1oMofMe3QceuL0utodeTDPz57J5ZZhiahhMMz10Y7qNoFgpMR8BaS7X41ZMsWrdY/VwDk/DNjJVy6rx381UK8P0efwxnzjxtK0cFk/TM+hxZIViiqkeTKvFYukLjxkUKyVmv3vVZ5hl1Z6/sBe9pIFXrytHG3j/G3bSjgNvRY//2d9e9q77/Yc5D+bHT3b0hWKKqR5M8UQOwQyKlRLTT6E/X5/ZaxrOuYWuFB1Jhvnla+lMLb7JzRNpTHOTPXf2+w+5eaTF/Nf0H1NJ0qvpkZdKHmCq5HG0Oi4XYjiD3I1EViZOTRd/bGxNip1bo0G8l1fHpbxa/mKhfP0EUSCpl9u+80MAAAAASUVORK5CYII=';
 
@@ -45,8 +52,9 @@ const PNG_BTN_APAGAR_TUDO =
 function onOpen() {
   SpreadsheetApp.getUi()
     .createMenu('📚 Automação')
-    .addItem('🔘 Inserir os 2 botões na planilha', 'criarBotoesNaPlanilha')
+    .addItem('🔘 Inserir os 3 botões na planilha', 'criarBotoesNaPlanilha')
     .addSeparator()
+    .addItem('🎯 Apagar linha selecionada', 'apagarLinhaSelecionada')
     .addItem('🗑️ Apagar última linha com dados', 'apagarUltimaLinha')
     .addItem('⚠️ Apagar todos os dados da planilha', 'apagarTodosOsDados')
     .addSeparator()
@@ -62,7 +70,87 @@ function onOpen() {
 }
 
 // ===============================================================
-// ACIONAMENTO IMEDIATO PELOS BOTÕES DE CAIXA (H8 e H9 na aba Dados)
+// MEMORIZA A ÚLTIMA LINHA SELECIONADA NA TABELA (A:E) PARA O H8
+// ===============================================================
+function salvarSelecaoRecente(linhas) {
+  const payload = JSON.stringify({ linhas: linhas, ts: Date.now() });
+  try {
+    CacheService.getScriptCache().put(CHAVE_CACHE_SELECAO, payload, 600);
+  } catch (e) {}
+  try {
+    PropertiesService.getScriptProperties().setProperty(CHAVE_CACHE_SELECAO, payload);
+  } catch (e) {}
+}
+
+function lerSelecaoRecente() {
+  let texto = '';
+  try {
+    texto = CacheService.getScriptCache().get(CHAVE_CACHE_SELECAO) || '';
+  } catch (e) {}
+  if (!texto) {
+    try {
+      texto = PropertiesService.getScriptProperties().getProperty(CHAVE_CACHE_SELECAO) || '';
+    } catch (e) {}
+  }
+  if (!texto) return [];
+  try {
+    const obj = JSON.parse(texto);
+    if (!obj || !Array.isArray(obj.linhas)) return [];
+    if (Date.now() - Number(obj.ts || 0) > 600000) return [];
+    return obj.linhas;
+  } catch (e) {
+    return [];
+  }
+}
+
+function limparSelecaoRecente() {
+  try {
+    CacheService.getScriptCache().remove(CHAVE_CACHE_SELECAO);
+  } catch (e) {}
+  try {
+    PropertiesService.getScriptProperties().deleteProperty(CHAVE_CACHE_SELECAO);
+  } catch (e) {}
+}
+
+function extrairLinhasDeIntervalos(intervalos) {
+  const mapa = {};
+  for (let i = 0; i < intervalos.length; i++) {
+    const r = intervalos[i];
+    if (!r) continue;
+    // Considera seleções que tocam as colunas A:E (1..5), incluindo clique no número da linha
+    if (r.getColumn() > 5) continue;
+    const inicio = r.getRow();
+    const fim = inicio + r.getNumRows() - 1;
+    for (let lin = inicio; lin <= fim; lin++) {
+      if (lin >= 2) {
+        mapa[lin] = true;
+      }
+    }
+  }
+  return Object.keys(mapa).map(Number).sort(function(a, b) { return a - b; });
+}
+
+function onSelectionChange(e) {
+  if (!e || !e.range) return;
+  const aba = e.range.getSheet();
+  if (aba.getName() !== 'Dados' && aba.getIndex() !== 1) return;
+
+  let intervalos = [e.range];
+  try {
+    const lista = aba.getActiveRangeList();
+    if (lista && lista.getRanges) {
+      intervalos = lista.getRanges();
+    }
+  } catch (err) {}
+
+  const linhas = extrairLinhasDeIntervalos(intervalos);
+  if (linhas.length > 0) {
+    salvarSelecaoRecente(linhas);
+  }
+}
+
+// ===============================================================
+// ACIONAMENTO IMEDIATO PELOS BOTÕES DE CAIXA (H8, H9 e H10)
 // ===============================================================
 function onEdit(e) {
   if (!e || !e.range || !e.source) return;
@@ -72,7 +160,10 @@ function onEdit(e) {
 
   const col = e.range.getColumn();
   const lin = e.range.getRow();
-  if (col !== COLUNA_PAINEL_INPUT || (lin !== LINHA_CHECK_ULTIMA && lin !== LINHA_CHECK_TUDO)) {
+  if (
+    col !== COLUNA_PAINEL_INPUT ||
+    (lin !== LINHA_CHECK_SELECIONADA && lin !== LINHA_CHECK_ULTIMA && lin !== LINHA_CHECK_TUDO)
+  ) {
     return;
   }
 
@@ -81,7 +172,19 @@ function onEdit(e) {
   // Desmarca imediatamente para funcionar como botão de clique
   e.range.setValue(false);
 
-  if (lin === LINHA_CHECK_ULTIMA) {
+  if (lin === LINHA_CHECK_SELECIONADA) {
+    const linhasSalvas = lerSelecaoRecente();
+    limparSelecaoRecente();
+    if (linhasSalvas.length === 0) {
+      mostrarToast(
+        'Clique primeiro na linha que deseja apagar (colunas A:E) ou use o botão azul "Apagar Linha Selecionada" em G12!',
+        '🎯 Apagar Linha Selecionada',
+        e.source
+      );
+      return;
+    }
+    executarApagarLinhasSelecionadas(linhasSalvas, e.source);
+  } else if (lin === LINHA_CHECK_ULTIMA) {
     executarApagarUltimaLinha(e.source);
   } else if (lin === LINHA_CHECK_TUDO) {
     executarApagarTodosOsDados(e.source);
@@ -89,7 +192,7 @@ function onEdit(e) {
 }
 
 // ===============================================================
-// CRIA OS 2 BOTÕES GRÁFICOS CLICÁVEIS NA PLANILHA
+// CRIA OS 3 BOTÕES GRÁFICOS CLICÁVEIS NA PLANILHA
 // ===============================================================
 function criarBotoesNaPlanilha() {
   const aba = abaPedidos();
@@ -98,32 +201,46 @@ function criarBotoesNaPlanilha() {
   const imagens = aba.getImages();
   for (let i = 0; i < imagens.length; i++) {
     const titulo = imagens[i].getAltTextTitle();
-    if (titulo === 'BTN_APAGAR_ULTIMA' || titulo === 'BTN_APAGAR_TUDO') {
+    if (
+      titulo === 'BTN_APAGAR_SELECIONADA' ||
+      titulo === 'BTN_APAGAR_ULTIMA' ||
+      titulo === 'BTN_APAGAR_TUDO'
+    ) {
       imagens[i].remove();
     }
   }
 
-  // Botão 1: Apagar Última Linha (coluna G = 7, linha 11)
+  // Botão 1: Apagar Linha Selecionada (coluna G = 7, linha 12)
+  const blobSel = Utilities.newBlob(
+    Utilities.base64Decode(PNG_BTN_APAGAR_SELECIONADA),
+    'image/png',
+    'botao_apagar_selecionada.png'
+  );
+  const imgSel = aba.insertImage(blobSel, 7, 12, 0, 4);
+  imgSel.assignScript('apagarLinhaSelecionada');
+  imgSel.setAltTextTitle('BTN_APAGAR_SELECIONADA');
+
+  // Botão 2: Apagar Última Linha (coluna G = 7, linha 15)
   const blobUltima = Utilities.newBlob(
     Utilities.base64Decode(PNG_BTN_APAGAR_ULTIMA),
     'image/png',
     'botao_apagar_ultima.png'
   );
-  const imgUltima = aba.insertImage(blobUltima, 7, 11, 0, 4);
+  const imgUltima = aba.insertImage(blobUltima, 7, 15, 0, 4);
   imgUltima.assignScript('apagarUltimaLinha');
   imgUltima.setAltTextTitle('BTN_APAGAR_ULTIMA');
 
-  // Botão 2: Apagar Todos os Dados (coluna G = 7, linha 14)
+  // Botão 3: Apagar Todos os Dados (coluna G = 7, linha 18)
   const blobTudo = Utilities.newBlob(
     Utilities.base64Decode(PNG_BTN_APAGAR_TUDO),
     'image/png',
     'botao_apagar_tudo.png'
   );
-  const imgTudo = aba.insertImage(blobTudo, 7, 14, 0, 4);
+  const imgTudo = aba.insertImage(blobTudo, 7, 18, 0, 4);
   imgTudo.assignScript('apagarTodosOsDados');
   imgTudo.setAltTextTitle('BTN_APAGAR_TUDO');
 
-  mostrarToast('Os 2 botões gráficos foram inseridos em G11 e G14!', '🔘 Botões Criados');
+  mostrarToast('Os 3 botões gráficos foram inseridos em G12, G15 e G18!', '🔘 Botões Criados');
 }
 
 // ===============================================================
@@ -220,6 +337,12 @@ function converterValor(entrada) {
   return Number(texto);
 }
 
+function linhaTemDados(linhaArray) {
+  return linhaArray.some(function(celula) {
+    return celula !== '' && celula !== null && celula !== undefined;
+  });
+}
+
 // Lê apenas as colunas A:E (ignora o Painel de Operações e botões em G:H).
 function estadoTabelaPedidos(aba) {
   const maxLinha = aba.getLastRow();
@@ -232,10 +355,7 @@ function estadoTabelaPedidos(aba) {
   let maiorId = 0;
 
   for (let i = 0; i < dados.length; i++) {
-    const temConteudo = dados[i].some(function(celula) {
-      return celula !== '' && celula !== null && celula !== undefined;
-    });
-    if (temConteudo) {
+    if (linhaTemDados(dados[i])) {
       ultimaLinha = i + 2;
     }
     const idNum = Number(dados[i][0]);
@@ -278,7 +398,149 @@ function formatarLinhaPedido(aba, linha) {
 }
 
 // ===============================================================
-// BOTÃO 1: APAGAR A ÚLTIMA LINHA QUE TEM INFORMAÇÕES
+// BOTÃO 1: APAGAR A(S) LINHA(S) SELECIONADA(S) NA TABELA
+// ===============================================================
+function executarApagarLinhasSelecionadas(linhasAlvo, planilhaExplicita) {
+  const aba = abaPedidos(false, planilhaExplicita);
+  const estado = estadoTabelaPedidos(aba);
+
+  if (estado.ultimaLinha <= 1) {
+    mostrarToast('Não há dados na tabela para apagar.', '🎯 Apagar Linha Selecionada', planilhaExplicita);
+    return { ok: false, erro: 'planilha vazia' };
+  }
+
+  const mapaApagar = {};
+  for (let i = 0; i < linhasAlvo.length; i++) {
+    const n = Number(linhasAlvo[i]);
+    if (n >= 2) mapaApagar[n] = true;
+  }
+
+  const totalLinhas = estado.ultimaLinha - 1;
+  const todasAsLinhas = aba.getRange(2, 1, totalLinhas, 5).getValues();
+  const removidas = [];
+  const mantidas = [];
+
+  for (let i = 0; i < todasAsLinhas.length; i++) {
+    const numLinha = i + 2;
+    const conteudo = todasAsLinhas[i];
+    if (mapaApagar[numLinha]) {
+      if (linhaTemDados(conteudo)) {
+        removidas.push({ linha: numLinha, dados: conteudo });
+      }
+    } else if (linhaTemDados(conteudo)) {
+      mantidas.push(conteudo);
+    }
+  }
+
+  if (removidas.length === 0) {
+    mostrarToast(
+      'A linha selecionada está vazia. Selecione uma linha com dados nas colunas A:E.',
+      '🎯 Apagar Linha Selecionada',
+      planilhaExplicita
+    );
+    return { ok: false, erro: 'a linha selecionada está vazia' };
+  }
+
+  // Limpa o bloco anterior em A:E sem mexer nas colunas G:H do painel/botões
+  const blocoAntigo = aba.getRange(2, 1, totalLinhas, 5);
+  blocoAntigo.clearContent();
+  try {
+    blocoAntigo.setBorder(false, false, false, false, false, false);
+  } catch (e) {}
+
+  // Regrava as linhas restantes compactadas (sem buracos em branco)
+  if (mantidas.length > 0) {
+    aba.getRange(2, 2, mantidas.length, 2).setNumberFormat('@');
+    aba.getRange(2, 1, mantidas.length, 5).setValues(mantidas);
+    try {
+      aba.getRange(2, 4, mantidas.length, 1).setNumberFormat('R$ #,##0.00');
+      aba.getRange(2, 5, mantidas.length, 1).setNumberFormat('dd/mm/yyyy hh:mm:ss');
+      aba.getRange(2, 1, mantidas.length, 1).setHorizontalAlignment('center');
+      aba.getRange(2, 4, mantidas.length, 2).setHorizontalAlignment('center');
+      aba.getRange(2, 1, mantidas.length, 5).setBorder(true, true, true, true, true, true);
+    } catch (e) {}
+  }
+
+  for (let j = 0; j < removidas.length; j++) {
+    const item = removidas[j];
+    registrarLog(
+      'Apagar Linha Selecionada',
+      item.dados[0] || '-',
+      item.dados[1] || '-',
+      item.dados[2] || '-',
+      item.dados[3],
+      'Linha ' + item.linha + ' apagada ao selecionar na planilha',
+      'planilha',
+      planilhaExplicita
+    );
+  }
+
+  const descLinhas = removidas.map(function(r) { return r.linha; }).join(', ');
+  mostrarToast(
+    removidas.length === 1
+      ? 'Linha ' + descLinhas + ' apagada com sucesso!'
+      : 'Linhas ' + descLinhas + ' apagadas com sucesso!',
+    '🎯 Apagar Linha Selecionada',
+    planilhaExplicita
+  );
+
+  return {
+    ok: true,
+    linhas: removidas.map(function(r) { return r.linha; }),
+    ids: removidas.map(function(r) { return r.dados[0]; })
+  };
+}
+
+function apagarLinhaSelecionada() {
+  const aba = abaPedidos();
+  let intervalos = [];
+
+  try {
+    const lista = aba.getActiveRangeList();
+    if (lista && lista.getRanges) {
+      intervalos = lista.getRanges();
+    }
+  } catch (e) {}
+
+  if (intervalos.length === 0) {
+    try {
+      const unico = aba.getActiveRange();
+      if (unico) intervalos = [unico];
+    } catch (e) {}
+  }
+
+  const linhas = extrairLinhasDeIntervalos(intervalos);
+  if (linhas.length === 0) {
+    try {
+      const ui = SpreadsheetApp.getUi();
+      ui.alert(
+        'Selecione uma linha da tabela',
+        'Clique primeiro em qualquer célula da linha que deseja apagar (colunas A até E, a partir da linha 2) e depois clique no botão "Apagar Linha Selecionada".',
+        ui.ButtonSet.OK
+      );
+    } catch (e) {}
+    return { ok: false, erro: 'nenhuma linha da tabela selecionada' };
+  }
+
+  limparSelecaoRecente();
+  const resultado = executarApagarLinhasSelecionadas(linhas);
+  if (!resultado.ok && arguments.length === 0) {
+    try {
+      const ui = SpreadsheetApp.getUi();
+      ui.alert(
+        'Aviso',
+        resultado.erro === 'planilha vazia'
+          ? 'Não há nenhuma linha com informações na tabela.'
+          : 'A linha selecionada já está vazia. Clique em uma linha preenchida (colunas A até E).',
+        ui.ButtonSet.OK
+      );
+    } catch (e) {}
+  }
+  return resultado;
+}
+
+// ===============================================================
+// BOTÃO 2: APAGAR A ÚLTIMA LINHA QUE TEM INFORMAÇÕES
 // ===============================================================
 function executarApagarUltimaLinha(planilhaExplicita) {
   const aba = abaPedidos(false, planilhaExplicita);
@@ -329,7 +591,7 @@ function apagarUltimaLinha() {
 }
 
 // ===============================================================
-// BOTÃO 2: APAGAR TODOS OS DADOS DA PLANILHA
+// BOTÃO 3: APAGAR TODOS OS DADOS DA PLANILHA
 // ===============================================================
 function executarApagarTodosOsDados(planilhaExplicita) {
   const aba = abaPedidos(false, planilhaExplicita);
@@ -345,6 +607,7 @@ function executarApagarTodosOsDados(planilhaExplicita) {
 
   // Também limpa os campos digitados no Painel (H2:H5), mantendo os rótulos e cabeçalhos
   aba.getRange(INTERVALO_PAINEL).clearContent();
+  limparSelecaoRecente();
 
   registrarLog(
     'Apagar Todos os Dados',
@@ -804,13 +1067,14 @@ function configurarPlanilha() {
   aba.getRange('G1:H1').merge();
   aba.getRange('H3:H4').setNumberFormat('@');
   aba.getRange('H5').setNumberFormat('R$ #,##0.00');
-  aba.getRange('G7:H9').setValues([
+  aba.getRange('G7:H10').setValues([
     ['BOTÕES DE EXCLUSÃO', ''],
+    ['Apagar Linha Selecionada', false],
     ['Apagar Última Linha', false],
     ['Apagar Todos os Dados', false]
   ]);
   aba.getRange('G7:H7').merge();
-  aba.getRange('H8:H9').insertCheckboxes();
+  aba.getRange('H8:H10').insertCheckboxes();
   abaLog();
   criarBotoesNaPlanilha();
 

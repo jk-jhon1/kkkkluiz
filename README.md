@@ -28,11 +28,13 @@ Projeto de livraria virtual integrado ao **Google Planilhas + Google Apps Script
    - A URL `/exec` em `script.js` continua a mesma.
 
 ### Botões de exclusão na planilha (`Dados`)
-A aba `Dados` possui **dois botões prontos** em `G7:H9` (caixas de clique rápido acionadas por `onEdit`):
-- **`H8` (`Apagar Última Linha`)** → apaga somente a última linha com informações na tabela (`A:E`), preservando o cabeçalho e o painel.
-- **`H9` (`Apagar Todos os Dados`)** → apaga todos os dados registrados na tabela (`A2:E...`) e limpa `H2:H5`, preservando o cabeçalho e o painel.
+A aba `Dados` possui **três botões prontos** em `G7:H10` (caixas de clique rápido acionadas por `onEdit` + `onSelectionChange`):
+- **`H8` (`Apagar Linha Selecionada`)** → clique primeiro na linha desejada da tabela (`A:E`) e depois marque `H8` para apagar essa linha e reorganizar as linhas de baixo.
+- **`H9` (`Apagar Última Linha`)** → apaga somente a última linha com informações na tabela (`A:E`), preservando o cabeçalho e o painel.
+- **`H10` (`Apagar Todos os Dados`)** → apaga todos os dados registrados na tabela (`A2:E...`) e limpa `H2:H5`, preservando o cabeçalho e o painel.
 
-Para inserir também **2 botões gráficos flutuantes** clicáveis na aba `Dados` (`G11` e `G14`), basta clicar no menu **`📚 Automação` > `🔘 Inserir os 2 botões na planilha`** (ou atribuir manualmente via **Inserir > Desenho > Atribuir script**):
+Para inserir também **3 botões gráficos flutuantes** clicáveis na aba `Dados` (`G12`, `G15` e `G18`), basta clicar no menu **`📚 Automação` > `🔘 Inserir os 3 botões na planilha`** (ou atribuir manualmente via **Inserir > Desenho > Atribuir script**):
+- `apagarLinhaSelecionada`
 - `apagarUltimaLinha`
 - `apagarTodosOsDados`
 - `registrarOperacao`
