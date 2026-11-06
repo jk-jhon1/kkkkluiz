@@ -27,13 +27,17 @@ Projeto de livraria virtual integrado ao **Google Planilhas + Google Apps Script
    - Clique no ícone de **lápis (Editar)** > em *Versão*, selecione **Nova versão** > clique em **Implantar**.
    - A URL `/exec` em `script.js` continua a mesma.
 
-### Opcional: criar botões visuais na planilha
-Além do menu **`📚 Automação`**, você também pode criar botões na aba `Dados`:
-1. Clique em **Inserir > Desenho**, desenhe um botão e clique em **Salvar e fechar**.
-2. Clique nos **3 pontinhos** no canto do botão > **Atribuir script** e informe um dos nomes abaixo (sem parênteses):
-   - `registrarOperacao`
-   - `atualizarInformacoes`
-   - `limparCampos`
+### Botões de exclusão na planilha (`Dados`)
+A aba `Dados` possui **dois botões prontos** em `G7:H9` (caixas de clique rápido acionadas por `onEdit`):
+- **`H8` (`Apagar Última Linha`)** → apaga somente a última linha com informações na tabela (`A:E`), preservando o cabeçalho e o painel.
+- **`H9` (`Apagar Todos os Dados`)** → apaga todos os dados registrados na tabela (`A2:E...`) e limpa `H2:H5`, preservando o cabeçalho e o painel.
+
+Para inserir também **2 botões gráficos flutuantes** clicáveis na aba `Dados` (`G11` e `G14`), basta clicar no menu **`📚 Automação` > `🔘 Inserir os 2 botões na planilha`** (ou atribuir manualmente via **Inserir > Desenho > Atribuir script**):
+- `apagarUltimaLinha`
+- `apagarTodosOsDados`
+- `registrarOperacao`
+- `atualizarInformacoes`
+- `limparCampos`
 
 ---
 
