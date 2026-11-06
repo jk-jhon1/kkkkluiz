@@ -5,35 +5,39 @@
  * Como instalar/atualizar na planilha:
  * 1. Na planilha Google ("TRABALHO INDIO"), clique em: Extensões > Apps Script.
  * 2. Apague todo o código antigo do editor, cole TODO este arquivo e salve (Ctrl+S).
- * 3. Recarregue a planilha (F5): o menu personalizado "📚 Automação" aparecerá no topo!
- * 4. Para o site enxergar a atualização (SEM mudar a URL!):
- *    No Apps Script, clique em Implantar > Gerenciar implantações > ícone de lápis (Editar) >
- *    Versão: "Nova versão" > Implantar.
- * 5. Opcional — Acionar também por Botões na planilha:
- *    Inserir > Desenho > desenhe um botão > Salvar e fechar > clique nos 3 pontinhos do botão >
- *    "Atribuir script" e digite um dos nomes abaixo (sem parênteses):
- *      - registrarOperacao
- *      - atualizarInformacoes
- *      - limparCampos
+ * 3. Recarregue a planilha (F5):
+ *    - As caixas de botão em H8 ("Apagar Última Linha") e H9 ("Apagar Todos os Dados") já funcionam na hora!
+ *    - Para inserir também os 2 botões gráficos flutuantes na aba Dados, clique no menu do topo:
+ *      "📚 Automação" > "🔘 Inserir os 2 botões na planilha".
+ * 4. Se quiser atualizar também a versão do site (sem mudar o link):
+ *    Implantar > Gerenciar implantações > lápis (Editar) > Versão: "Nova versão" > Implantar.
  *
- * Estrutura da aba "Dados":
- *   Tabela de pedidos (colunas A:E):
- *     A: ID | B: NOME_DO_CLIENTE | C: LIVRO | D: VALOR | E: ULTIMA ATUALIZAÇÃO
- *   Painel de Operações / Formulário (colunas G:H):
- *     H2: ID (para atualizar/limpar) | H3: NOME DO CLIENTE | H4: LIVRO | H5: VALOR (R$)
- *
- * Estrutura da aba "Log":
- *   A: DATA/HORA | B: USUARIO | C: AÇÃO | D: ID | E: NOME DO CLIENTE | F: LIVRO | G: VALOR | H: OBSERVAÇÃO
+ * Funções para botões (Inserir > Desenho > Atribuir script):
+ *   - apagarUltimaLinha      -> apaga a última linha preenchida da tabela (A:E)
+ *   - apagarTodosOsDados     -> apaga todos os dados registrados na tabela (A:E)
+ *   - registrarOperacao      -> registra uma operação
+ *   - atualizarInformacoes   -> atualiza informações de um pedido
+ *   - limparCampos           -> limpa campos do painel ou de um pedido
  */
 
 const ID_PLANILHA = '1txnYqaemiW6WD_eE-t6JQiMpvzom3WaHUw11vDPf2WM';
 
-// Células do Painel de Operações na aba "Dados"
+// Células do Painel de Operações e dos Botões Rápidos na aba "Dados"
 const CELULA_ID = 'H2';
 const CELULA_NOME = 'H3';
 const CELULA_LIVRO = 'H4';
 const CELULA_VALOR = 'H5';
 const INTERVALO_PAINEL = 'H2:H5';
+const LINHA_CHECK_ULTIMA = 8; // H8 -> Apagar Última Linha
+const LINHA_CHECK_TUDO = 9;   // H9 -> Apagar Todos os Dados
+const COLUNA_PAINEL_INPUT = 8; // Coluna H
+
+// Imagens PNG em Base64 para gerar os 2 botões gráficos automaticamente na planilha
+const PNG_BTN_APAGAR_ULTIMA =
+  'iVBORw0KGgoAAAANSUhEUgAAAOYAAAAoCAMAAADdVnZNAAACBFBMVEX////CQQzDQQzQSQzcUAzfUgzgUgzVTAzoVgzqWAzVSwzqWxH75Nf518TqXRP0q4X74tXrYhv97+n////xlGP3wKP4ybD74NL3w6jrZR/4zbf2uJn4zrj62srvhk/rYBj+9/T++/rrZiDym2798ev86uDzpHv1so/507/99fDwi1b2upr++PX86N30qYPsbiz50r775NjxkmDufEH0rIb51sP++/nxlGT74tb98uz51cL++vjtcC/0qYL98er0ron99fHwiVTzpn7++ff63M32upv1sY375dn3v6L+/fztdTb62Mb3wqf2uJjymGnqWxD75tr86+L3wKT98Or+/v7618XwiVPzpX386d/1tpX+/Pv5z7r97+j98+787uf50Lvvg0r99O/qXhX51MH75tvtdjfvgUjtdznvf0b0r4r628vqWQ3qXxb3xqzvhU3sby7vh1D3xq3ynnLtdDT1tJPsaibtdjj87eb3waXymGr3xav4ybH0rYj+/f3ymWv4x67saSXxkF3xl2jxlmbuf0X++fbrYRr749bwjFj4y7PvhEzwiFLqXBLxkV/uej7qXxfxk2L4y7TynHDwjlvvgkn87OP1tpb4yrL63s/0qIH50bzwjVn1tZT98+3sbi3uej399vL87OT2u5zrZB7sbCr62cfrYxz1s5D508D2vJ7ynG/qWg9CeMHqAAAAAXRSTlMAQObYZgAAAxxJREFUaN7tmodTE1EQxjlSNyAiXxBEIyBBQQJIF1BBY0MIAtIFUbGjIhYUMaIIauyCIvaC3X/Sd5dyaY6gl9x45zeTmc3O7tv95W1eZu4lJkZN4hQrP8hYjtNodXrFSafVcFysuJUGIylURpN3Q2M5rdzNRFJaz35yJrk7iawMnHtkFTuxbhmFseU0cvcRaWkETEV/M3lpBUyd3G1EWjoBUy93G5GW/j+mpIqLX5SgAszFiUvko4z+0CbBHGLNN2MBSX+HmQws/YMqKUglWga+Rb7PNCxnzhWWlb9PCo6LCmZ6BpC5aiHrx/0ac16fTbCigpkFazZWC9XW5OTGryXKy7Zl5hcwT+G6jKJioET0JKG0rLwiDOZ6MFUKHVeioKrasmGjdVMN+S0WgMnH8fVq8zfzb7ak2XkjMFZazK3Yth07hNK2mp2o20X1DQWOajTS7iY0t+zhMb0eFtPa1tAeBrOjEyldNR7M7r096N3XB+wnMTUMZqYjBwcOMqOu/xBvBMZKinkYOHIUOMaXPk50Al2UQAMnW3CKTgODdIbH9HpYzFDAxgQPrRszj84C5ygRHSSmhsE8TxeAYWYk0yBvBMZKiunAxQEqwiW+9AjRZYzSlWYnm8AqaoSd+EZKfB4Wc1WcgjGia8D1UMxxKoaNqA1san2pYTBvUDowwYxGtxEYKyVmQi8ETd5k1RxEt9B1G5MVEy5W7Q5QSHcZps/jf1oMofMe3QceuL0utodeTDPz57J5ZZhiahhMMz10Y7qNoFgpMR8BaS7X41ZMsWrdY/VwDk/DNjJVy6rx381UK8P0efwxnzjxtK0cFk/TM+hxZIViiqkeTKvFYukLjxkUKyVmv3vVZ5hl1Z6/sBe9pIFXrytHG3j/G3bSjgNvRY//2d9e9q77/Yc5D+bHT3b0hWKKqR5M8UQOwQyKlRLTT6E/X5/ZaxrOuYWuFB1Jhvnla+lMLb7JzRNpTHOTPXf2+w+5eaTF/Nf0H1NJ0qvpkZdKHmCq5HG0Oi4XYjiD3I1EViZOTRd/bGxNip1bo0G8l1fHpbxa/mKhfP0EUSCpl9u+80MAAAAASUVORK5CYII=';
+
+const PNG_BTN_APAGAR_TUDO =
+  'iVBORw0KGgoAAAANSUhEUgAAAOYAAAAoCAMAAADdVnZNAAAB+1BMVEX///+aGxuZGxubGxuxHx/EIiLLIyPFIiKyHx+5ICDYJSXcJia4ICDeNzf////jVVXxra3zubn88vL409P419f++/v88PDtkZHdMTH99fX++vrfODjcKyv1xcX30ND99PT87u787e364eHfPDzqfX364+PsiYn76+vum5v53NzmaGjwpaX99vbtkJDgQkLocXHtk5P2ysr++fnodXXztLTeNTXvoaH99/f53t7gQ0PrhYX9+PjysbHnbW3ztbX30tLwpqbumZn53d3ulpbxrKz+/PziTEz2zMzysLDwo6PpeXncKir65eXxrq777Oz+/v72y8vmZWX52tr64uLxqqr76Oj3z8/cJyf75+fysrLjUVHtkpLxqaniTU3kW1viTk7kWVnul5f30dHvoKDdLCzdLy/lYGDgRETlY2PmZ2fgQEDlX1/hR0fkWFjrh4fyr6/penrytLTzurrtlZX+/f32yMjfPT3pe3vqgYHocnLumJjeMjL529vmamr0u7v2ycnmZGTodHTgPz/iUFDiT0/rhITnbGzztrboc3P0v7/0vLzqf3/zt7f98/P64ODriIjjVFT42dnsjY32x8f0urr41NTsjo71w8Pnamrvn5/87+/peHjjUlLvnZ3eMzPhRUX1xsbqfHz88fHkXFzeNDTeNjbvnJzqfn7cKSnueRX0AAAAAXRSTlMAQObYZgAAA0VJREFUaN7tmudXE0EUxcNQQhi4lABCIAlFhEgRQQEJiooKoSvGKAIiIHZFxAqiWLAgWLEX7P6ZzuxmN0FWSnDd44Z7TnLIPW/fe7+8mcmHwWAIJoUQnSrEDzKUkLDwCB3KGElIqERJiCmK6lRR0YRIszRq3YyaMnrnSaK17kRdmYh4+uh2xYqKEs4hEql1H2orjI9T3zuTK1zAjNC6DbUVsYKpI61g6kn/GDMGiNUi0SIw44D4pfeRAFHm5WEmAknJ5lUpqmOmpAKWtKW0ls7frDabHRk2W9xyMTPNmUBWttqYq5GZgzXsj1zkWRMcaynNzymwZBUyp8ia6ljH68lOLorXl5R6n7RhA3vfWJZVXpHHxrFJipadygqn3VHpjVZ2E1FF6WYLtviVXSBRYJjV2LoN2wWEgpod2LmL1tYVukpQTxsq0NjUzOtJDotpaa3b7Y+Zvgdte93Y52HR+w+wwcTKTjsyD9bE53uXgKIrYtIOlDT4l50vUWCYnUDXIaCbIxymtAe9tI96jjQxhH7gKD3GMSWHxWzxPSpgHgdO0HaW4CRwin+KlZ0uuOtPS7tO2fVingHS5CILJAoM0wW3hzpwliMMUHoOg/R84xA7Wy7QejgpvcgxJYfFXPoN8zLsbFTAFSE6m0XLjqejhG37q2Kwsus/zVll/5woIMy+ZPHALB9mCC5KR9B7DeWl3aO4zr/WInqD1ZMdFjM2d5o36S32lffziXSLQxAd1uPtO8CwNE0FV8Qct+AulYsskCggzHvA/dHRBy2YYAhJD2sx1DmOgoGJSVaP780qvklkRwEz3YG2Djd6PA1TqH3k4FtKch4/cT1twmSDEKzs8pO2ulk4aX1l508UEOYzvhQpfY5phvDipdPxinpev8kYrONQ/Mh7C7zzOXMxaYyrzTn1/gOlH2fsI5/4EpecImuz5XPrF2+0sst+N4eSzYVs4/mKLJAoEEw/zUIQ9JW9xjH0bTFPa6tlYX6fKS6bRIfWDGpjjlU4E6Z//NSa4e9i/s9awdSTggozXOs21JZRwAzTug21FUmC53LBQExaN6KuokkwXfwZCInW7bqNMknXuMKlfKRR6wt0NRQe5ncpHyz/YqF//QL+7Al68He2CAAAAABJRU5ErkJggg==';
 
 // ===============================================================
 // MENU PERSONALIZADO (acionado automaticamente ao abrir a planilha)
@@ -41,6 +45,11 @@ const INTERVALO_PAINEL = 'H2:H5';
 function onOpen() {
   SpreadsheetApp.getUi()
     .createMenu('📚 Automação')
+    .addItem('🔘 Inserir os 2 botões na planilha', 'criarBotoesNaPlanilha')
+    .addSeparator()
+    .addItem('🗑️ Apagar última linha com dados', 'apagarUltimaLinha')
+    .addItem('⚠️ Apagar todos os dados da planilha', 'apagarTodosOsDados')
+    .addSeparator()
     .addItem('➕ Registrar operação', 'registrarOperacao')
     .addItem('✏️ Atualizar informações', 'atualizarInformacoes')
     .addItem('🧹 Limpar campos', 'limparCampos')
@@ -48,41 +57,107 @@ function onOpen() {
     .addItem('🔍 Carregar pedido no painel (por ID)', 'carregarPedidoNoPainel')
     .addItem('🗑️ Limpar campos de um pedido (por ID)', 'limparCamposPedido')
     .addItem('🧹 Limpar apenas o painel (H2:H5)', 'limparPainel')
-    .addSeparator()
-    .addItem('⚠️ Limpar todos os pedidos', 'limparTudo')
     .addItem('🛠️ Configurar estrutura da planilha', 'configurarPlanilha')
     .addToUi();
 }
 
 // ===============================================================
-// FUNÇÕES AUXILIARES DE PLANILHA, VALIDAÇÃO E LOG
+// ACIONAMENTO IMEDIATO PELOS BOTÕES DE CAIXA (H8 e H9 na aba Dados)
 // ===============================================================
-function obterPlanilha() {
-  try {
-    return SpreadsheetApp.openById(ID_PLANILHA);
-  } catch (e) {
-    return SpreadsheetApp.getActiveSpreadsheet();
+function onEdit(e) {
+  if (!e || !e.range || !e.source) return;
+  const aba = e.range.getSheet();
+  const nomeAba = aba.getName();
+  if (nomeAba !== 'Dados' && aba.getIndex() !== 1) return;
+
+  const col = e.range.getColumn();
+  const lin = e.range.getRow();
+  if (col !== COLUNA_PAINEL_INPUT || (lin !== LINHA_CHECK_ULTIMA && lin !== LINHA_CHECK_TUDO)) {
+    return;
+  }
+
+  if (e.range.getValue() !== true) return;
+
+  // Desmarca imediatamente para funcionar como botão de clique
+  e.range.setValue(false);
+
+  if (lin === LINHA_CHECK_ULTIMA) {
+    executarApagarUltimaLinha(e.source);
+  } else if (lin === LINHA_CHECK_TUDO) {
+    executarApagarTodosOsDados(e.source);
   }
 }
 
-function mostrarToast(mensagem, titulo) {
+// ===============================================================
+// CRIA OS 2 BOTÕES GRÁFICOS CLICÁVEIS NA PLANILHA
+// ===============================================================
+function criarBotoesNaPlanilha() {
+  const aba = abaPedidos();
+
+  // Remove versões anteriores dos mesmos botões para não duplicar
+  const imagens = aba.getImages();
+  for (let i = 0; i < imagens.length; i++) {
+    const titulo = imagens[i].getAltTextTitle();
+    if (titulo === 'BTN_APAGAR_ULTIMA' || titulo === 'BTN_APAGAR_TUDO') {
+      imagens[i].remove();
+    }
+  }
+
+  // Botão 1: Apagar Última Linha (coluna G = 7, linha 11)
+  const blobUltima = Utilities.newBlob(
+    Utilities.base64Decode(PNG_BTN_APAGAR_ULTIMA),
+    'image/png',
+    'botao_apagar_ultima.png'
+  );
+  const imgUltima = aba.insertImage(blobUltima, 7, 11, 0, 4);
+  imgUltima.assignScript('apagarUltimaLinha');
+  imgUltima.setAltTextTitle('BTN_APAGAR_ULTIMA');
+
+  // Botão 2: Apagar Todos os Dados (coluna G = 7, linha 14)
+  const blobTudo = Utilities.newBlob(
+    Utilities.base64Decode(PNG_BTN_APAGAR_TUDO),
+    'image/png',
+    'botao_apagar_tudo.png'
+  );
+  const imgTudo = aba.insertImage(blobTudo, 7, 14, 0, 4);
+  imgTudo.assignScript('apagarTodosOsDados');
+  imgTudo.setAltTextTitle('BTN_APAGAR_TUDO');
+
+  mostrarToast('Os 2 botões gráficos foram inseridos em G11 e G14!', '🔘 Botões Criados');
+}
+
+// ===============================================================
+// FUNÇÕES AUXILIARES DE PLANILHA, VALIDAÇÃO E LOG
+// ===============================================================
+function obterPlanilha(forcarPorId, planilhaExplicita) {
+  if (planilhaExplicita) return planilhaExplicita;
+  if (!forcarPorId) {
+    try {
+      const ativa = SpreadsheetApp.getActiveSpreadsheet();
+      if (ativa) return ativa;
+    } catch (e) {}
+  }
+  return SpreadsheetApp.openById(ID_PLANILHA);
+}
+
+function mostrarToast(mensagem, titulo, planilhaExplicita) {
   try {
-    const ativa = SpreadsheetApp.getActiveSpreadsheet();
-    if (ativa) {
-      ativa.toast(mensagem, titulo || '📚 Automação', 5);
+    const alvo = planilhaExplicita || SpreadsheetApp.getActiveSpreadsheet();
+    if (alvo) {
+      alvo.toast(mensagem, titulo || '📚 Automação', 5);
     }
   } catch (e) {
     // Ignora se chamado fora da interface da planilha
   }
 }
 
-function abaPedidos() {
-  const planilha = obterPlanilha();
+function abaPedidos(forcarPorId, planilhaExplicita) {
+  const planilha = obterPlanilha(forcarPorId, planilhaExplicita);
   return planilha.getSheetByName('Dados') || planilha.getSheets()[0];
 }
 
-function abaLog() {
-  const planilha = obterPlanilha();
+function abaLog(forcarPorId, planilhaExplicita) {
+  const planilha = obterPlanilha(forcarPorId, planilhaExplicita);
   let log = planilha.getSheetByName('Log');
   if (!log) {
     log = planilha.insertSheet('Log');
@@ -100,9 +175,9 @@ function abaLog() {
   return log;
 }
 
-function registrarLog(acao, id, nome, livro, valor, observacao, origem) {
+function registrarLog(acao, id, nome, livro, valor, observacao, origem, planilhaExplicita) {
   try {
-    const log = abaLog();
+    const log = abaLog(origem === 'site', planilhaExplicita);
     const linha = log.getLastRow() + 1;
     const valorCelula = valor === '' || valor === undefined || valor === null || isNaN(Number(valor))
       ? ''
@@ -145,7 +220,7 @@ function converterValor(entrada) {
   return Number(texto);
 }
 
-// Lê apenas as colunas A:E (ignora o Painel de Operações em G:H).
+// Lê apenas as colunas A:E (ignora o Painel de Operações e botões em G:H).
 function estadoTabelaPedidos(aba) {
   const maxLinha = aba.getLastRow();
   if (maxLinha < 2) {
@@ -157,7 +232,9 @@ function estadoTabelaPedidos(aba) {
   let maiorId = 0;
 
   for (let i = 0; i < dados.length; i++) {
-    const temConteudo = dados[i].some(celula => celula !== '' && celula !== null);
+    const temConteudo = dados[i].some(function(celula) {
+      return celula !== '' && celula !== null && celula !== undefined;
+    });
     if (temConteudo) {
       ultimaLinha = i + 2;
     }
@@ -181,7 +258,7 @@ function acharLinha(aba, id) {
   const ids = aba.getRange(2, 1, maxLinha - 1, 1).getValues();
   for (let i = 0; i < ids.length; i++) {
     if (ids[i][0] !== '' && Number(ids[i][0]) === idAlvo) {
-      return i + 2; // +2: linha 1 é cabeçalho e o índice começa em 0
+      return i + 2;
     }
   }
   return 0;
@@ -201,9 +278,115 @@ function formatarLinhaPedido(aba, linha) {
 }
 
 // ===============================================================
+// BOTÃO 1: APAGAR A ÚLTIMA LINHA QUE TEM INFORMAÇÕES
+// ===============================================================
+function executarApagarUltimaLinha(planilhaExplicita) {
+  const aba = abaPedidos(false, planilhaExplicita);
+  const estado = estadoTabelaPedidos(aba);
+
+  if (estado.ultimaLinha <= 1) {
+    mostrarToast('Não há nenhuma linha com informações para apagar.', '🗑️ Apagar Última Linha', planilhaExplicita);
+    return { ok: false, erro: 'nenhuma linha com informações' };
+  }
+
+  const linhaAlvo = estado.ultimaLinha;
+  const intervalo = aba.getRange(linhaAlvo, 1, 1, 5);
+  const removidos = intervalo.getValues()[0];
+
+  intervalo.clearContent();
+  try {
+    intervalo.setBorder(false, false, false, false, false, false);
+  } catch (e) {}
+
+  registrarLog(
+    'Apagar Última Linha',
+    removidos[0] || '-',
+    removidos[1] || '-',
+    removidos[2] || '-',
+    removidos[3],
+    'Última linha preenchida (linha ' + linhaAlvo + ') apagada via botão',
+    'planilha',
+    planilhaExplicita
+  );
+
+  mostrarToast(
+    'Linha ' + linhaAlvo + ' apagada com sucesso!',
+    '🗑️ Apagar Última Linha',
+    planilhaExplicita
+  );
+  return { ok: true, linha: linhaAlvo, id: removidos[0] };
+}
+
+function apagarUltimaLinha() {
+  const resultado = executarApagarUltimaLinha();
+  if (!resultado.ok && arguments.length === 0) {
+    try {
+      const ui = SpreadsheetApp.getUi();
+      ui.alert('Planilha vazia', 'Não há nenhuma linha com informações para apagar.', ui.ButtonSet.OK);
+    } catch (e) {}
+  }
+  return resultado;
+}
+
+// ===============================================================
+// BOTÃO 2: APAGAR TODOS OS DADOS DA PLANILHA
+// ===============================================================
+function executarApagarTodosOsDados(planilhaExplicita) {
+  const aba = abaPedidos(false, planilhaExplicita);
+  const estado = estadoTabelaPedidos(aba);
+
+  if (estado.ultimaLinha > 1) {
+    const intervalo = aba.getRange(2, 1, estado.ultimaLinha - 1, 5);
+    intervalo.clearContent();
+    try {
+      intervalo.setBorder(false, false, false, false, false, false);
+    } catch (e) {}
+  }
+
+  // Também limpa os campos digitados no Painel (H2:H5), mantendo os rótulos e cabeçalhos
+  aba.getRange(INTERVALO_PAINEL).clearContent();
+
+  registrarLog(
+    'Apagar Todos os Dados',
+    '-',
+    '-',
+    '-',
+    '',
+    'Todos os dados da planilha foram apagados via botão',
+    'planilha',
+    planilhaExplicita
+  );
+
+  mostrarToast('Todos os dados da planilha foram apagados!', '⚠️ Apagar Todos os Dados', planilhaExplicita);
+  return { ok: true };
+}
+
+function apagarTodosOsDados(confirmadoViaCodigo) {
+  if (arguments.length === 0) {
+    const ui = SpreadsheetApp.getUi();
+    const confirma = ui.alert(
+      '⚠️ Apagar Todos os Dados',
+      'Tem certeza que deseja apagar TODOS os dados registrados na planilha?\n(O cabeçalho e o painel serão preservados.)',
+      ui.ButtonSet.YES_NO
+    );
+    if (confirma !== ui.Button.YES) return { ok: false, erro: 'cancelado' };
+  } else if (!confirmadoViaCodigo) {
+    return { ok: false, erro: 'confirmação necessária' };
+  }
+
+  return executarApagarTodosOsDados();
+}
+
+// Mantém compatibilidade com o nome anterior limparTudo
+function limparTudo(confirmadoViaCodigo) {
+  if (arguments.length === 0) {
+    return apagarTodosOsDados();
+  }
+  return apagarTodosOsDados(confirmadoViaCodigo);
+}
+
+// ===============================================================
 // 1) PROCEDIMENTO PARA REGISTRAR UMA OPERAÇÃO
-//    Pode ser chamado pelo site/código: registrarOperacao(nome, livro, valor)
-//    OU sem argumentos por botão / menu personalizado na planilha!
 // ===============================================================
 function registrarOperacao(nome, livro, valor, origem) {
   if (arguments.length === 0) {
@@ -218,18 +401,17 @@ function registrarOperacao(nome, livro, valor, origem) {
     return { ok: false, erro: 'dados inválidos' };
   }
 
-  const aba = abaPedidos();
+  const ehSite = origem === 'site';
+  const aba = abaPedidos(ehSite);
   const estado = estadoTabelaPedidos(aba);
   const linha = estado.ultimaLinha + 1;
   const id = estado.proximoId;
   const agora = new Date();
 
-  // Grava primeiro os dados (garantindo texto simples em B:C) e depois formata
   aba.getRange(linha, 2, 1, 2).setNumberFormat('@');
   aba.getRange(linha, 1, 1, 5).setValues([[id, nomeLimpo, livroLimpo, valorNum, agora]]);
   formatarLinhaPedido(aba, linha);
 
-  const ehSite = origem === 'site';
   registrarLog(
     ehSite ? 'Registro pelo Site' : 'Registro Manual',
     id,
@@ -254,7 +436,6 @@ function acionarRegistrarOperacao() {
 
   const usouPainel = Boolean(nome || livro || valorTexto);
 
-  // Se o Painel (H3:H5) estiver vazio, pergunta os dados em janelas interativas
   if (!usouPainel) {
     const respNome = ui.prompt('➕ Registrar Operação (1/3)', 'Informe o nome do cliente:', ui.ButtonSet.OK_CANCEL);
     if (respNome.getSelectedButton() !== ui.Button.OK) return;
@@ -292,8 +473,6 @@ function acionarRegistrarOperacao() {
 
 // ===============================================================
 // 2) PROCEDIMENTO PARA ATUALIZAR INFORMAÇÕES
-//    Pode ser chamado via código: atualizarInformacoes(id, { nome, livro, valor })
-//    OU sem argumentos por botão / menu personalizado na planilha!
 // ===============================================================
 function atualizarInformacoes(id, campos) {
   if (arguments.length === 0) {
@@ -361,7 +540,6 @@ function acionarAtualizarInformacoes() {
   const brutoValor = aba.getRange(CELULA_VALOR).getValue();
   const valorPainelTexto = String(brutoValor === undefined || brutoValor === null ? '' : brutoValor).trim();
 
-  // Caso 1: usuário preencheu o ID (H2) e pelo menos um campo novo no Painel (H3:H5)
   if (idTexto && (nomePainel || livroPainel || valorPainelTexto)) {
     const camposPainel = {};
     if (nomePainel) camposPainel.nome = nomePainel;
@@ -387,7 +565,6 @@ function acionarAtualizarInformacoes() {
     return;
   }
 
-  // Caso 2: fluxo guiado por janelas (pede o ID se não estiver em H2)
   if (!idTexto) {
     const respId = ui.prompt('✏️ Atualizar Informações', 'Informe o ID do pedido que deseja atualizar:', ui.ButtonSet.OK_CANCEL);
     if (respId.getSelectedButton() !== ui.Button.OK) return;
@@ -456,8 +633,6 @@ function acionarAtualizarInformacoes() {
 
 // ===============================================================
 // 3) PROCEDIMENTO PARA LIMPAR CAMPOS
-//    Pode ser chamado via código: limparCampos(id)
-//    OU sem argumentos por botão / menu personalizado na planilha!
 // ===============================================================
 function limparCampos(id) {
   if (arguments.length === 0) {
@@ -496,7 +671,6 @@ function acionarLimparCampos() {
   const idPainel = valoresPainel[0];
   const temDadosFormulario = Boolean(valoresPainel[1] || valoresPainel[2] || valoresPainel[3]);
 
-  // Se houver dados digitados nos campos do Painel (H3:H5), limpa o Painel imediatamente
   if (temDadosFormulario) {
     aba.getRange(INTERVALO_PAINEL).clearContent();
     registrarLog('Limpar Campos', '-', '-', '-', '', 'Campos do painel (H2:H5) limpos via menu/botão', 'planilha');
@@ -504,7 +678,6 @@ function acionarLimparCampos() {
     return;
   }
 
-  // Se apenas o ID (H2) estiver preenchido, pergunta se deseja limpar o pedido daquele ID ou só o painel
   if (idPainel) {
     const escolha = ui.alert(
       '🧹 Limpar Campos',
@@ -530,7 +703,6 @@ function acionarLimparCampos() {
     return;
   }
 
-  // Se o painel já estiver vazio, oferece limpar os campos de um pedido pelo ID
   const resp = ui.alert(
     '🧹 Limpar Campos',
     'Os campos de entrada do painel (H2:H5) já estão limpos.\nDeseja limpar os campos de um pedido específico informando o ID?',
@@ -541,7 +713,6 @@ function acionarLimparCampos() {
   }
 }
 
-// Limpa diretamente apenas as células de entrada do Painel (H2:H5).
 function limparPainel() {
   const aba = abaPedidos();
   aba.getRange(INTERVALO_PAINEL).clearContent();
@@ -549,7 +720,6 @@ function limparPainel() {
   mostrarToast('Campos do painel (H2:H5) limpos!', '🧹 Limpar Painel');
 }
 
-// Limpa os campos (nome, livro e valor) de um pedido específico informado pelo ID.
 function limparCamposPedido() {
   const ui = SpreadsheetApp.getUi();
   const aba = abaPedidos();
@@ -587,7 +757,6 @@ function limparCamposPedido() {
   }
 }
 
-// Auxiliar: carrega os dados atuais de um pedido nas células H2:H5 para facilitar a edição.
 function carregarPedidoNoPainel() {
   const ui = SpreadsheetApp.getUi();
   const aba = abaPedidos();
@@ -616,36 +785,6 @@ function carregarPedidoNoPainel() {
   mostrarToast('Pedido #' + dados[0] + ' carregado em H2:H5. Altere e clique em Atualizar!', '🔍 Painel');
 }
 
-// Apaga TODOS os pedidos (colunas A:E), preservando o cabeçalho e o Painel (G1:H5).
-function limparTudo(confirmadoViaCodigo) {
-  const aba = abaPedidos();
-
-  if (arguments.length === 0) {
-    const ui = SpreadsheetApp.getUi();
-    const confirma = ui.alert(
-      '⚠️ Atenção: Limpar TODOS os pedidos',
-      'Tem certeza que deseja apagar todos os pedidos registrados na aba Dados?\n(O cabeçalho e o Painel de Operações serão mantidos.)',
-      ui.ButtonSet.YES_NO
-    );
-    if (confirma !== ui.Button.YES) return;
-  } else if (!confirmadoViaCodigo) {
-    return { ok: false, erro: 'confirmação necessária' };
-  }
-
-  const estado = estadoTabelaPedidos(aba);
-  if (estado.ultimaLinha > 1) {
-    aba.getRange(2, 1, estado.ultimaLinha - 1, 5).clearContent();
-  }
-
-  registrarLog('Limpar Tudo', '-', '-', '-', '', 'Todos os pedidos da aba Dados foram limpos', 'planilha');
-
-  if (arguments.length === 0) {
-    mostrarToast('Todos os pedidos foram removidos.', '⚠️ Limpar Tudo');
-  }
-  return { ok: true };
-}
-
-// Garante que os cabeçalhos da tabela (A1:E1), o Painel (G1:H5) e a aba Log existam.
 function configurarPlanilha() {
   const aba = abaPedidos();
   aba.getRange('A1:E1').setValues([[
@@ -665,10 +804,18 @@ function configurarPlanilha() {
   aba.getRange('G1:H1').merge();
   aba.getRange('H3:H4').setNumberFormat('@');
   aba.getRange('H5').setNumberFormat('R$ #,##0.00');
+  aba.getRange('G7:H9').setValues([
+    ['BOTÕES DE EXCLUSÃO', ''],
+    ['Apagar Última Linha', false],
+    ['Apagar Todos os Dados', false]
+  ]);
+  aba.getRange('G7:H7').merge();
+  aba.getRange('H8:H9').insertCheckboxes();
   abaLog();
+  criarBotoesNaPlanilha();
 
   if (arguments.length === 0) {
-    mostrarToast('Estrutura da planilha verificada e configurada!', '🛠️ Configuração');
+    mostrarToast('Estrutura e botões configurados!', '🛠️ Configuração');
   }
 }
 
@@ -682,7 +829,7 @@ function doGet() {
 function doPost(e) {
   const lock = LockService.getScriptLock();
   try {
-    lock.waitLock(10000); // evita dois pedidos gravarem na mesma linha simultaneamente
+    lock.waitLock(10000);
     const dados = JSON.parse(e.postData.contents);
     return resposta(registrarOperacao(dados.nome, dados.livro, dados.valor, 'site'));
   } catch (erro) {
@@ -701,19 +848,4 @@ function resposta(objeto) {
   return ContentService
     .createTextOutput(JSON.stringify(objeto))
     .setMimeType(ContentService.MimeType.JSON);
-}
-
-// ===============================================================
-// FUNÇÕES DE TESTE RÁPIDO PELO EDITOR (opcionais)
-// ===============================================================
-function testeRegistrar() {
-  Logger.log(registrarOperacao('Cliente Teste', '1x O Hobbit', 45.5));
-}
-
-function testeAtualizar() {
-  Logger.log(atualizarInformacoes(1, { valor: 99.9 }));
-}
-
-function testeLimparCampos() {
-  Logger.log(limparCampos(1));
 }
