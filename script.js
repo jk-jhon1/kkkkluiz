@@ -322,7 +322,7 @@ modal.addEventListener('click', (e) => {
 
 // URL do Google Apps Script (termina em /exec). Veja apps-script.gs.
 // Vazia = o pedido só é simulado na tela, nada é gravado.
-const URL_PLANILHA = 'https://script.google.com/macros/s/AKfycbz573fayk6c2mGbEjsomEaB2pEkzyq087IRKd9iWG3d2X6rx9GgFktZ1GCUX3G3wHRu/exec';
+const URL_PLANILHA = 'https://script.google.com/macros/s/AKfycby-sX5lrW3o-4ote9E_oOF_49eG8VzTABPEd8gBZU533uTk2Ez7BkUu8I52QrKsyS52/exec';
 
 formCheckout.addEventListener('submit', async (e) => {
   e.preventDefault(); // não recarrega a página
