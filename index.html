@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>blog</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body class="tema-escuro">
+    <header>
+        <h1 style="font-size: 4rem;">📚LIVRARIAS PARA BAICHO</h1>
+        <p>Aqui você encontra o seu livro pelo preço mais baicho😀</p>
+        <div class="container-preco">
+            <button class="botao-carrinho">🛒 Carrinho</button>
+        </div>
+    </header>
+    <main id ="lista-livros">
+    
+    </main>
+    <footer>
+        <div class="botao_vendas">
+            <h1>carrinho</h1>
+        </div>
+        <article>
+            <div class="carrinho-container">
+                <h2>Seu Carrinho</h2>
+                <div id="local-carrinho"></div>
+                <div class="resumo-carrinho">
+                    <p>Subtotal: R$:<span id="subtotal">0</span></p>
+                    <p>Frete: R$:<span id="frete">0</span></p>
+                    <p>total: R$:<span id="total">0</span></p>
+                    <button class="btn-checkout" id="btnFinalizar">Finalizar Compra</button>
+                </div>
+            </div>
+        </article>
+    </footer>
+
+    <div id="modalDetalhes" class="modal" hidden>
+        <div class="modal-conteudo">
+            <button id="btnFecharDetalhes" class="modal-fechar" type="button" aria-label="Fechar">✕</button>
+            <div id="conteudoDetalhes"></div>
+        </div>
+    </div>
+
+    <div id="modalCheckout" class="modal" hidden>
+        <div class="modal-conteudo">
+            <button id="btnFechar" class="modal-fechar" type="button" aria-label="Fechar">✕</button>
+            <h2>Finalizar compra</h2>
+            <div id="resumoCompra"></div>
+            <form id="formCheckout">
+                <label>Nome completo
+                    <input type="text" name="nome" required>
+                </label>
+                <label>E-mail
+                    <input type="email" name="email" required>
+                </label>
+                <label>Endereço de entrega
+                    <input type="text" name="endereco" required>
+                </label>
+                <label>Forma de pagamento
+                    <select name="pagamento">
+                        <option>Pix</option>
+                        <option>Cartão</option>
+                        <option>Boleto</option>
+                    </select>
+                </label>
+                <button type="submit" class="btn-confirmar">Confirmar pedido</button>
+            </form>
+            <p id="mensagemSucesso" hidden></p>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+
+</html>
